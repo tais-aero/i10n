@@ -1,0 +1,2 @@
+/etc export-ignore
+/**/*.json -whitespace
