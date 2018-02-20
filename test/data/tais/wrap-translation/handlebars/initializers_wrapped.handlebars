@@ -1,0 +1,82 @@
+<div class="terminal-action {{#IF isTWTMode}}hidden{{/IF}}">
+  <svg class="terminal-action__icon"><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="svg/sprite.svg#ta_init"></use></svg>
+  <div class="terminal-action__content">
+    <div class="terminal-action__text terminal-action__on-select_hide">{{MSG 'Инициализаторы'}}</div>
+    <div class="terminal-action__main terminal-action__hidden terminal-action__on-select_show">
+      <div class="terminal-action__main__close"></div>
+      <div class="terminal-action__main__header">{{MSG 'Инициализаторы'}}</div>
+
+      <div class="tabs-block">
+
+        <div class="terminal-menu__main-menu__menu-block__col__content">
+          <div class="terminal-menu__main-menu__menu-block__col__items">
+            <div class="terminal-menu__main-menu__menu-block__col__item">
+              <span class="terminal-menu__main-menu__menu-block__command"
+                data-tooltip="EQP {{@carrier}}"
+                {{#COMMAND execute=true}}
+                  EQP {{@carrier}}
+                {{/COMMAND}}
+              >{{MSG 'Компоновки'}}</span>
+            </div>
+            <div class="terminal-menu__main-menu__menu-block__col__item">
+              <span class="terminal-menu__main-menu__menu-block__command"
+                data-tooltip="PRR {{@carrier}}>"
+                {{#COMMAND execute=true}}
+                  PRR {{@carrier}}
+                {{/COMMAND}}
+              >{{MSG 'Профили'}}</span>
+            </div>
+            <div class="terminal-menu__main-menu__menu-block__col__item">
+              <span class="terminal-menu__main-menu__menu-block__command"
+                data-tooltip="GRH {{@carrier}}>"
+                {{#COMMAND execute=true}}
+                  GRH {{@carrier}}
+                {{/COMMAND}}
+              >{{MSG 'Наземные службы'}}</span>
+            </div>
+            <div class="terminal-menu__main-menu__menu-block__col__item">
+              <span class="terminal-menu__main-menu__menu-block__command"
+                    data-tooltip="ALT {{@carrier}}>"
+                  {{#COMMAND execute=true}}
+                    ALT {{@carrier}}
+                  {{/COMMAND}}
+              >{{MSG 'Спецброни на рейсах'}}</span>
+            </div>
+            <div class="terminal-menu__main-menu__menu-block__col__item">
+              <span class="terminal-menu__main-menu__menu-block__command"
+                data-tooltip="DEI {{@carrier}}>"
+                {{#COMMAND execute=true}}
+                    DEI {{@carrier}}
+                {{/COMMAND}}
+              >{{MSG 'Свойства на рейсах'}}</span>
+            </div>
+            <div class="terminal-menu__main-menu__menu-block__col__item">
+              <span class="terminal-menu__main-menu__menu-block__command"
+                data-tooltip="PRT {{@carrier}}>"
+                {{#COMMAND execute=true}}
+                  PRT {{@carrier}}
+                {{/COMMAND}}
+              >{{MSG 'Защита пассажиров'}}</span>
+            </div>
+            <div class="terminal-menu__main-menu__menu-block__col__item">
+              <span class="terminal-menu__main-menu__menu-block__command"
+                data-tooltip="CKN {{@carrier}}>"
+                {{#COMMAND execute=true}}
+                  CKN {{@carrier}}
+                {{/COMMAND}}
+              >{{MSG 'Регистрация'}}</span>
+            </div>
+            <div class="terminal-menu__main-menu__menu-block__col__item">
+              <span class="terminal-menu__main-menu__menu-block__col__item-header terminal-menu__main-menu__menu-block__command">{{MSG 'Кодшеры'}}</span>
+              <div class="terminal-menu__main-menu__menu-block__col__sub-items">
+                <div><div class="terminal-menu__main-menu__menu-block__command">{{@carrier}} {{MSG '- партнер'}}</div></div>
+                <div><div class="terminal-menu__main-menu__menu-block__command">{{@carrier}} {{MSG '- оператор'}}</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,32 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: TAIS i18n\n"
+"Report-Msgid-Bugs-To: andrew.kostyuk@gmail.com\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: ankostyuk <andrew.kostyuk@gmail.com>\n"
+"Language-Team: JSC TAIS <office@tais.ru>\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"CLDR_PLURAL_FORMS_FORMAT: one{0}other{1}\n"
+"X-Generator: Poedit 1.8.12\n"
+
+msgid "Ключ"
+msgstr "Key"
+
+msgctxt "к разгадке чего-либо"
+msgid "Ключ"
+msgstr "Clue"
+
+#, fuzzy
+msgctxt "ключ воды, приток реки"
+msgid ""
+"Ключ"
+msgstr ""
+"Feeder"
+
+msgid "Найденных совпадений: {count}"
+msgstr ""

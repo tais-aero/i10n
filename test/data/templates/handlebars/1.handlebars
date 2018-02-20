@@ -1,0 +1,19 @@
+<div class="p">
+{{LOOKUP (LOOKUP x y) "Z"}}
+{{#WITH x}}
+  {{#IF x '==' 'G'}}
+    {{MSG}}
+    {{MSG 'Ключ 1_1'}}
+    {{MSG 'Ключ 1_1' 'Контекст 1_1'}}
+    {{MSG 'Ключ 1_1' data_1_1}}
+    {{MSG 'Ключ 1_1' 'Контекст 1_1' data_1_1}}
+  {{/IF}}
+  {{#IF y}}
+    <span class="p-c" title="{{MSG}}"></span>
+    <span class="p-c" title="{{MSG 'Ключ 1_2'}}"></span>
+    <span class="p-c" title="{{MSG 'Ключ 1_2' 'Контекст 1_2'}}"></span>
+    <span class="p-c" title="{{MSG 'Ключ 1_2' data_1_2}}"></span>
+    <span class="p-c" title="{{MSG 'Ключ 1_2' 'Контекст 1_2' data_1_2}}"></span>
+  {{/IF}}
+{{/WITH}}
+</div>

@@ -1,0 +1,129 @@
+<div class="reaccomodation-rule">
+  <div class="reaccomodation-rule__order">
+    <span class="badge badge_xs"><span>{{ROWNUMBER index}}</span></span>
+  </div>
+  <div class="reaccomodation-rule__predicat">
+  {{~#IF DATN~}}
+    Для рейсов
+    {{~#IF GRD1}} с вылетом из {{GRD1}}{{#EXISTS GRD2}} и посадкой в {{GRD2}}{{/EXISTS}}
+    {{else}}
+      {{#EXISTS GRD2}} с посадкой в {{GRD2}}{{/EXISTS}}
+    {{~/IF~}}
+    с датой вылета с <span class="reaccomodation-rule__moment reaccomodation-rule__moment-from">{{MOMENT DATN format='DD MMM YYYY' locale=locale}}</span>
+    {{#IF DATK}}по <span class="reaccomodation-rule__moment reaccomodation-rule__moment-to">{{MOMENT DATK format='DD MMM YYYY' locale=locale}}</span>{{/IF}}
+    {{#IF CHD '!=' '1234567'}}
+      {{#IF CHD '!=' 8}}
+        {{#IF CHD}}
+          в {{> components/date-pickers/dow-text days=CHD showHolders=false separator=' '}}
+        {{/IF}}
+      {{/IF}}
+    {{/IF}}
+    <br/>
+  {{else}}
+    {{#UNLESS RLOCS}}
+      {{#UNLESS RBDS}}
+        {{#IF RBDS}}
+          {{#IF (HAS_CHARS STATUS 'CWRS')}}
+            Для всех заказов
+          {{/IF}}
+        {{else}}
+          Для всех заказов
+        {{/IF}}
+      {{/UNLESS}}
+    {{/UNLESS}}
+  {{~/IF~}}
+
+  {{~#IF RLOCS~}}
+    Для локаторов {{RLOCS}}
+    <br>
+  {{~/IF~}}
+
+  {{~#IF RBDS~}}
+    Для КБ {{RBD RBDS}}<br>
+  {{~/IF~}}
+
+  {{~#EXISTS STATUS~}}
+    {{#UNLESS (HAS_CHARS STATUS 'CWRS')}}
+      Для сегментов со статусом
+      {{#IF (HAS_CHAR STATUS 'C')}}confirmed{{#IF (HAS_CHAR STATUS 'W') '||' (HAS_CHAR STATUS 'R') '||' (HAS_CHAR STATUS 'S')}},{{/IF}}{{/IF}}
+      {{#IF (HAS_CHAR STATUS 'W')}}waitlisted{{#IF (HAS_CHAR STATUS 'R') '||' (HAS_CHAR STATUS 'S')}},{{/IF}}{{/IF}}
+      {{#IF (HAS_CHAR STATUS 'R')}}requested{{#IF (HAS_CHAR STATUS 'S')}},{{/IF}}{{/IF}}
+      {{#IF (HAS_CHAR STATUS 'S')}}space avаilable{{/IF}}
+      <br>
+    {{/UNLESS}}
+  {{~/EXISTS~}}
+  </div>
+  <div class="right_arrow"></div>
+  <div class="reaccomodation-rule__operation">
+  {{~#IF OPER '==' 'А'}}<span class="reaccomodation-rule__operation-name">Аннулировать</span>{{/IF~}}
+  {{#IF OPER '==' 'Н'}}
+    <span class="reaccomodation-rule__operation-name">Подобрать</span> рейс&nbsp;
+    {{~#IF T1_AK~}}
+      {{NORMALIZED 'iata_crt_ak' T1_AK}}
+      {{~else~}}
+      {{~#IF AK~}}
+        {{NORMALIZED 'iata_crt_ak' AK}}
+        {{~else~}}
+        {{NORMALIZED 'iata_crt_ak' ak}}
+      {{~/IF~}}
+    {{~/IF~}}
+    {{~#IF T1_GRD1}} с вылетом из {{T1_GRD1}}{{#EXISTS T1_GRD2}} и посадкой в {{T1_GRD2}}{{/EXISTS}}
+    {{else}}{{#EXISTS T1_GRD2}} с посадкой в {{T1_GRD2}}{{/EXISTS}}
+    {{~/IF~}}
+    {{~#EXISTS T1_SHIFT~}}
+      {{~#IF T1_SHIFT '==' 0~}}
+        , в тот же день
+        {{~else~}}
+        , cдвиг &plusmn;{{T1_SHIFT}} {{PLURAL T1_SHIFT 'дней' 'день' 'дня' 'дней'}}
+      {{~/IF~}}
+    {{/EXISTS~}}
+  {{/IF}}
+  {{~#IF OPER '==' 'П'~}}
+    <span class="reaccomodation-rule__operation-name">Перебронировать</span> на {{#UNLESS T1_AK}}{{#UNLESS T1_FLIGHTNO}}{{#UNLESS FLIGHTNO}}{{#UNLESS flight}}тот же {{/UNLESS}}{{/UNLESS}}{{/UNLESS}}{{/UNLESS}}рейс&nbsp;
+    {{~#IF T1_AK~}}
+      {{NORMALIZED 'iata_crt_ak' T1_AK}}
+      {{~else~}}
+      {{~#IF AK~}}
+        {{NORMALIZED 'iata_crt_ak' AK}}
+        {{~else~}}
+        {{NORMALIZED 'iata_crt_ak' ak}}
+      {{~/IF~}}
+    {{~/IF~}}
+
+    {{~#IF T1_FLIGHTNO~}}
+      -{{T1_FLIGHTNO}}
+      {{~else~}}
+      {{~#IF FLIGHTNO~}}
+        -{{FLIGHTNO}}
+        {{~else~}}
+        {{#IF flight}}-{{flight}}{{/IF}}
+      {{~/IF~}}
+    {{~/IF~}}
+    {{~#IF T1_GRD1}} с вылетом из {{T1_GRD1}}{{#EXISTS T1_GRD2}} и посадкой в {{T1_GRD2}}{{/EXISTS}}
+    {{else}}{{#EXISTS T1_GRD2}} с посадкой в {{T1_GRD2}}{{/EXISTS}}
+    {{~/IF~}}
+    {{~#EXISTS T1_SHIFT~}}
+      {{~#IF T1_SHIFT '==' 0~}}
+        , в тот же день
+        {{~else~}}
+        , cдвиг {{T1_SHIFT}} {{PLURAL T1_SHIFT 'дней' 'день' 'дня' 'дней'}}
+      {{~/IF~}}
+    {{/EXISTS~}}
+  {{/IF}}
+  <br>
+
+  {{#IF T1_FROMBSG '==' 1}}&mdash; cохраняя спецброни<br>{{/IF}}
+  {{#IF T1_CANOVERBOOK '==' 1}}&mdash; разрешая сверхбронирование<br>{{/IF}}
+  {{#IF BYPASSRTGCHECK '==' 1}}&mdash; разрешая нарушение стыковок<br>{{/IF}}
+
+  {{#IF T1_ORBD}}
+    &mdash; заменяя БР {{RBD T1_ORBD}} на {{RBD T1_NRBD}}<br>
+  {{/IF}}
+
+  {{#IF TEXTRUS}}
+    Информация для агента: {{TEXTRUS}}{{#IF TEXTENG}} [{{TEXTENG}}]{{/IF}}<br/>
+  {{else}}
+    {{#IF TEXTENG}}Информация для агента: {{TEXTENG}}<br/>{{/IF}}
+  {{/IF}}
+  </div>
+</div>

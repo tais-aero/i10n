@@ -1,0 +1,63 @@
+{
+  "comments": [],
+  "extractedComments": [],
+  "headers": {
+    "Project-Id-Version": "TAIS i18n",
+    "Report-Msgid-Bugs-To": "andrew.kostyuk@gmail.com",
+    "POT-Creation-Date": "",
+    "PO-Revision-Date": "",
+    "Last-Translator": "ankostyuk <andrew.kostyuk@gmail.com>",
+    "Language": "ru",
+    "Language-Team": "JSC TAIS <office@tais.ru>",
+    "Content-Type": "text/plain; charset=UTF-8",
+    "Content-Transfer-Encoding": "8bit",
+    "Plural-Forms": "nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);",
+    "MIME-Version": "1.0",
+    "X-Generator": "Poedit 1.8.12"
+  },
+  "items": [{
+    "msgid": "Ключ",
+    "msgctxt": null,
+    "references": ["xxx/yyy/zzz:1"],
+    "msgid_plural": null,
+    "msgstr": [""],
+    "comments": [],
+    "extractedComments": [],
+    "flags": {},
+    "obsolete": false,
+    "nplurals": 3
+  }, {
+    "msgid": "Ключ",
+    "msgctxt": "К разгадке чего-либо",
+    "references": ["xxx/yyy/zzz:2"],
+    "msgid_plural": null,
+    "msgstr": [""],
+    "comments": [],
+    "extractedComments": [],
+    "flags": {},
+    "obsolete": false,
+    "nplurals": 3
+  }, {
+    "msgid": "Ключ",
+    "msgctxt": "Ключ воды, приток реки",
+    "references": ["xxx/yyy/zzz:3"],
+    "msgid_plural": null,
+    "msgstr": [""],
+    "comments": [],
+    "extractedComments": [],
+    "flags": {},
+    "obsolete": false,
+    "nplurals": 3
+  }, {
+    "msgid": "Найдено",
+    "msgctxt": "Поиск совпадений",
+    "references": ["xxx/yyy/zzz:0"],
+    "msgid_plural": null,
+    "msgstr": ["{count, plural, =0 {Совпадений не найдено} =1 {Только одно совпадение} one {Совпадение} few {Совпадения} many {Совпадений} other {Совпадений}}"],
+    "comments": ["Форматирование в зависимости от формы множественного числа.", "См. документацию."],
+    "extractedComments": [],
+    "flags": {},
+    "obsolete": false,
+    "nplurals": 3
+  }]
+}

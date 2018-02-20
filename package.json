@@ -1,0 +1,34 @@
+{
+  "name": "i18n",
+  "version": "1.0.0-SNAPSHOT",
+  "description": "TAIS Internationalization tool",
+  "author": "Andrew Kostyuk <andrew.kostyuk@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "chai": "4.1.2",
+    "mocha": "4.0.1"
+  },
+  "dependencies": {
+    "acorn": "5.2.1",
+    "ast-traverse": "0.1.1",
+    "cldr-data": "32.0.0",
+    "escodegen": "1.9.0",
+    "fs-extra": "5.0.0",
+    "glob": "7.1.2",
+    "globalize": "1.3.0",
+    "handlebars": "4.0.6",
+    "lodash": "3.10.1",
+    "parse5": "4.0.0",
+    "pofile": "1.0.10"
+  },
+  "cldr-data-urls-filter": "(core|units)",
+  "scripts": {
+    "test:harvester": "mocha 'test/unit/harvester/**/*.spec.js'",
+    "test": "mocha 'test/unit/**/*.spec.js'",
+    "postinstall": "node postinstall"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.tais.aero/tais/ticketchanger.git"
+  }
+}

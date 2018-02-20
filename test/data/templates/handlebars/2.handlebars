@@ -1,0 +1,26 @@
+{{#IF this}}
+  <div class="x"></div>
+  <div class="y">
+    <div class="z">
+      <div class="z-x" style="
+      {{~#IF x~}}
+        width: {{x}}%
+      {{else}}
+        width: 0
+      {{~/IF~}}
+      "></div>
+      <div class="z-t">
+        {{#IF t}}
+          {{t}}
+        {{else}}
+          {{MSG 'KEY'}}...
+        {{/IF}}
+      </div>
+    </div>
+    {{#IF c}}
+    <div class="c"></div>
+    {{/IF}}
+  </div>
+{{else}}
+  <span class="fa fa-spinner fa-pulse fa-5x"></span>
+{{/IF}}

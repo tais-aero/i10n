@@ -1,0 +1,59 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: TAIS i18n\n"
+"Report-Msgid-Bugs-To: andrew.kostyuk@gmail.com\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: ankostyuk <andrew.kostyuk@gmail.com>\n"
+"Language-Team: JSC TAIS <office@tais.ru>\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"CLDR_PLURAL_FORMS_FORMAT: one{0}few{1}many{2}other{2}\n"
+"X-Generator: Poedit 1.8.12\n"
+
+msgid "Ключ"
+msgstr ""
+
+msgctxt "к разгадке чего-либо"
+msgid "Ключ"
+msgstr ""
+
+msgctxt "ключ воды, приток реки"
+msgid "Ключ"
+msgstr ""
+
+# Форматирование {...}.
+msgid "Найденных совпадений"
+msgstr "Найденных совпадений: {count}"
+
+# Форматирование [...].
+msgid "Сколько?"
+msgstr "{0}"
+
+# Форматирование {...} в зависимости от формы множественного числа.
+msgctxt "Поиск совпадений"
+msgid "Найдено"
+msgstr "{count, plural, =0 {Совпадений не найдено} =1 {Только одно совпадение} one {Совпадение} few {Совпадения} many {Совпадений} other {Совпадений}}"
+
+# HTML Escape.
+msgid "Данные"
+msgstr "<div click=\"alert('XSS')\">Данные</div>"
+
+# Форматирование {...}.
+msgid "Результат [12 / 2]: {result}"
+
+# Формы множественного числа {...}.
+msgctxt "Поиск совпадений"
+msgid "{count, plural, =0 {Совпадений не найдено} =1 {Только одно совпадение} one {Совпадение} few {Совпадения} many {Совпадений} other {Совпадений}}"
+
+# Формы множественного числа [...].
+msgid "{0} {0, plural, one {корова} few {коровы} many {коров} other {коровы}}"
+
+# Формы множественного числа + Форматирование {...}.
+msgid "Найдено {count} {count, plural, one {совпадение} few {совпадения} many {совпадений} other {совпадений}} из {allCount}"
+
+# Формы множественного числа + Форматирование [...].
+msgid "Найдено {0} {0, plural, one {совпадение} few {совпадения} many {совпадений} other {совпадений}} из {1}"
