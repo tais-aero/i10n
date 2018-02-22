@@ -1,8 +1,8 @@
 //
 var test = {
-  'Ключ': 'Текст',
-  'Key': 'Text'
+  'xxx': "        <h3>Текст</h3>\
+          ${1}<br>\
+          ${2}<br>\
+          ",
+  'yyy': 'Текст'
 };
-
-var str_ru = 'Текст';
-var str_en = 'Text';

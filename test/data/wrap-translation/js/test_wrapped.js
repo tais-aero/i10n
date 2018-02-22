@@ -2,9 +2,9 @@ var tr = require('L10n').translator;
 
 //
 var test = {
-  'Ключ': tr.msg('Текст'),
-  'Key': 'Text'
+  'xxx': tr.msg("        <h3>Текст</h3>\
+          ${1}<br>\
+          ${2}<br>\
+          "),
+  'yyy': tr.msg('Текст')
 };
-
-var str_ru = tr.msg('Текст');
-var str_en = 'Text';

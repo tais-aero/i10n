@@ -379,26 +379,32 @@ Harvester.prototype = {
           var spacesBefore = '';
           var spacesAfter = '';
 
-          var literal = node.raw.replace(
-            /^["'](\s+)|(\s+)["']$/g,
-            function(match, leading, trailing) {
-              var quote = node.raw[0];
+          var literal;
 
-              if (leading) {
-                spacesBefore = quote + leading + quote + concat;
-                offset += concat.length + 2;
-                return quote;
+          if (options.checkSpaces) {
+            literal = node.raw.replace(
+              /^["'](\s+)|(\s+)["']$/g,
+              function(match, leading, trailing) {
+                var quote = node.raw[0];
+
+                if (leading) {
+                  spacesBefore = quote + leading + quote + concat;
+                  offset += concat.length + 2;
+                  return quote;
+                }
+
+                if (trailing) {
+                  spacesAfter = concat + quote + trailing + quote;
+                  offset += concat.length + 2;
+                  return quote;
+                }
+
+                return match;
               }
-
-              if (trailing) {
-                spacesAfter = concat + quote + trailing + quote;
-                offset += concat.length + 2;
-                return quote;
-              }
-
-              return match;
-            }
-          );
+            );
+          } else {
+            literal = node.raw;
+          }
 
           input =
             before + spacesBefore +

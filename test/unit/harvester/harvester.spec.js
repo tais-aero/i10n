@@ -10,6 +10,7 @@ var map = require('lodash/collection/map');
 var flatten = require('lodash/array/flatten');
 var endsWith = require('lodash/string/endsWith');
 var isNumber = require('lodash/lang/isNumber');
+var defaultsDeep = require('lodash/object/defaultsDeep');
 
 var testUtils = require('test/utils');
 var Handlebars = require('handlebars');
@@ -19,6 +20,7 @@ var Handlebars = require('handlebars');
 var harvester = require('src/harvester');
 
 var JS_WRAP_OPTIONS = {
+  checkSpaces: true,
   translatorRequireTemplate: "var {translator} = require('{translatorRequire}').translator;",
   translatorRequire: 'L10n',
   translator: 'tr',
@@ -387,7 +389,11 @@ describe('harvester', function() {
       });
 
       it('test', function() {
-        test_wrapTranslationTextsInJs('test/data/wrap-translation/js/test', true);
+        var wrapOptions = defaultsDeep({
+          checkSpaces: false
+        }, JS_WRAP_OPTIONS);
+
+        test_wrapTranslationTextsInJs('test/data/wrap-translation/js/test', true, wrapOptions);
       });
     });
 
@@ -413,7 +419,7 @@ describe('harvester', function() {
       var dir = 'wrap-translation';
       var srcDir = path.resolve('test/data', dir);
       var targetDir = path.resolve('test/tmp', dir);
-      var pattern = '**/*.+(js|handlebars)';
+      var pattern = '**/!(test|test_wrapped).+(js|handlebars)';
 
       fs.removeSync(targetDir);
       fs.copySync(srcDir, targetDir);
@@ -427,7 +433,7 @@ describe('harvester', function() {
         },
         function(err, result) {
           expect(err).to.be.null;
-          expect(result.files).to.have.lengthOf(16);
+          expect(result.files).to.have.lengthOf(12);
           expect(result.stat.counts.wrappedTexts).to.be.at.least(1);
 
           var wrappedTextsCount = 0;
@@ -485,7 +491,9 @@ describe('harvester', function() {
   });
 });
 
-function test_wrapTranslationTextsInJs(file, dump) {
+function test_wrapTranslationTextsInJs(file, dump, wrapOptions) {
+  wrapOptions = wrapOptions || JS_WRAP_OPTIONS;
+
   var js = fs.readFileSync(
     file + '.js', 'utf8'
   );
@@ -494,17 +502,19 @@ function test_wrapTranslationTextsInJs(file, dump) {
     file + '_wrapped.js', 'utf8'
   );
 
-  var result = harvester.wrapTranslationTextsInJs(js, JS_WRAP_OPTIONS);
+  var result = harvester.wrapTranslationTextsInJs(js, wrapOptions);
   dump && fs.outputFileSync('test/tmp/' + file + '_wrapped.js', result.wrapped);
   assert_wrapTranslationTextsInJs(js, result, expextedJs);
 
-  result = harvester.wrapTranslationTextsInJs(result.wrapped, JS_WRAP_OPTIONS);
+  result = harvester.wrapTranslationTextsInJs(result.wrapped, wrapOptions);
   dump && fs.outputFileSync('test/tmp/' + file + '_wrapped_2.js', result.wrapped);
   assert_wrapTranslationTextsInJs(result.wrapped, result, expextedJs);
 }
 
 //
-function test_wrapTranslationTextsInHandlebars(file, done, dump) {
+function test_wrapTranslationTextsInHandlebars(file, done, dump, wrapOptions) {
+  wrapOptions = wrapOptions || HANDLEBARS_WRAP_OPTIONS;
+
   var template = fs.readFileSync(
     file + '.handlebars', 'utf8'
   );
@@ -513,11 +523,11 @@ function test_wrapTranslationTextsInHandlebars(file, done, dump) {
     file + '_wrapped.handlebars', 'utf8'
   );
 
-  harvester.wrapTranslationTextsInHandlebars(template, HANDLEBARS_WRAP_OPTIONS, function(result) {
+  harvester.wrapTranslationTextsInHandlebars(template, wrapOptions, function(result) {
     dump && fs.outputFileSync('test/tmp/' + file + '_wrapped.handlebars', result.wrapped);
     assert_wrapTranslationTextsInHandlebars(template, result, expextedTemplate);
 
-    harvester.wrapTranslationTextsInHandlebars(result.wrapped, HANDLEBARS_WRAP_OPTIONS, function(result) {
+    harvester.wrapTranslationTextsInHandlebars(result.wrapped, wrapOptions, function(result) {
       dump && fs.outputFileSync('test/tmp/' + file + '_wrapped_2.handlebars', result.wrapped);
       assert_wrapTranslationTextsInHandlebars(result.wrapped, result, expextedTemplate);
 
