@@ -39,6 +39,11 @@ var DEFAULT_CONFIG = {
   baseLocale: 'ru',
 
   /**
+   * Don't escape message
+   */
+  noEscape: false,
+
+  /**
    * Template for untranslated message.
    * This formatted template will be used instead of untranslated messages.
    * Note: This template will not be used for base locale messages.
@@ -84,6 +89,15 @@ Translator.prototype = {
    */
   setConfig: function(config) {
     this._config = merge({}, DEFAULT_CONFIG, config);
+    return this._config;
+  },
+
+  /**
+   * Get config.
+   *
+   * @returns {Object} Current config.
+   */
+  getConfig: function() {
     return this._config;
   },
 
@@ -206,10 +220,14 @@ Translator.prototype = {
         globalizeMessageKey, data === null ? undefined : data
       );
 
-      return escape(message);
+      return this._toMessage(message);
     }
 
     return this._buildUntranslatedMessage(locale, key, messageKey, data);
+  },
+
+  _toMessage: function(text) {
+    return this._config.noEscape ? text : escape(text);
   },
 
   _loadMessages: function(json) {
@@ -256,7 +274,7 @@ Translator.prototype = {
     var config = this._config;
 
     if (!config.untranslatedMessageTemplate || locale === config.baseLocale) {
-      return escape(key);
+      return this._toMessage(key);
     }
 
     var message = key;
@@ -277,7 +295,7 @@ Translator.prototype = {
     var templateData = {};
 
     templateData[LOCALE_PROPERTY_NAME] = locale;
-    templateData[MESSAGE_KEY_PROPERTY_NAME] = message;
+    templateData[MESSAGE_KEY_PROPERTY_NAME] = this._toMessage(message);
     merge(templateData, config.untranslatedMessageData);
 
     return utils.formatTemplate(

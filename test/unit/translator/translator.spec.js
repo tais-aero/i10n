@@ -4,6 +4,8 @@ var expect = chai.expect;
 
 var fs = require('fs');
 
+var cloneDeep = require('lodash/lang/cloneDeep');
+
 var testUtils = require('test/utils');
 
 // -----------------------------------------------------------------------------
@@ -105,7 +107,9 @@ describe('translator', function() {
   describe('HTML Escape for messages', function() {
     it('base locale', function() {
         translator.setLocale('ru');
-        expect(translator.message('Key')).to.be.equal('Key');
+        expect(translator.message('<a>Key</a>')).to.be.equal(
+          '&lt;a&gt;Key&lt;/a&gt;'
+        );
     });
 
     it('not base locale', function() {
@@ -119,6 +123,52 @@ describe('translator', function() {
 
         expect(translator.message('Key')).to.be.equal(
           '&lt;div click=&quot;alert(&#39;XSS&#39;)&quot;&gt;&lt;/div&gt;'
+        );
+
+        expect(translator.message('<a>Key</a>')).to.be.equal(
+          '<b class="untranslated" data-locale="en">&lt;a&gt;Key&lt;/a&gt;</b>'
+        );
+
+        expect(translator.message('blah-blah-blah')).to.be.equal(
+          '<b class="untranslated" data-locale="en">blah-blah-blah</b>'
+        );
+    });
+  });
+
+  describe('No HTML Escape for messages', function() {
+    var config;
+
+    before(function() {
+      var c = translator.getConfig();
+      config = cloneDeep(c);
+      c.noEscape = true;
+      translator.setConfig(c);
+    });
+
+    after(function() {
+      translator.setConfig(config);
+    });
+
+    it('base locale', function() {
+        translator.setLocale('ru');
+        expect(translator.message('<a>Key</a>')).to.be.equal('<a>Key</a>');
+    });
+
+    it('not base locale', function() {
+        translator.loadMessages({
+          en: {
+            'Key': '<div click="alert(\'XSS\')"></div>'
+          }
+        });
+
+        translator.setLocale('en');
+
+        expect(translator.message('Key')).to.be.equal(
+          '<div click="alert(\'XSS\')"></div>'
+        );
+
+        expect(translator.message('<a>Key</a>')).to.be.equal(
+          '<b class="untranslated" data-locale="en"><a>Key</a></b>'
         );
 
         expect(translator.message('blah-blah-blah')).to.be.equal(
