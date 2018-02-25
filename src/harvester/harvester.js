@@ -227,7 +227,8 @@ Harvester.prototype = {
 
       // execute msgmerge
       var command = utils.formatTemplate(
-        'msgmerge -U -v -s --no-wrap {poFile} {potFile}', null, {
+        'msgmerge -U -v -s --no-fuzzy-matching --no-wrap {poFile} {potFile}',
+        null, {
           poFile: poFile,
           potFile: potFile
         }
