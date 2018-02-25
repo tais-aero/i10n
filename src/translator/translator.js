@@ -29,6 +29,8 @@ var TEMPLATE_OPTIONS = {
 
 var GLOBALIZE_ESCAPE_STRING = '\u0006'; // [ACKNOWLEDGE]{1}
 
+var NORMALIZE_KEY_REGEXP = /\t/g;
+
 /**
  * Default config
  */
@@ -205,7 +207,7 @@ Translator.prototype = {
   message: function(/*key, context, data*/) {
     var args = utils.buildMessageArguments.apply(this, arguments);
 
-    var key = args.key;
+    var key = this._normalizeKey(args.key);
     var context = args.context;
     var data = args.data;
 
@@ -216,8 +218,8 @@ Translator.prototype = {
     if (isTranslated) {
       var globalizeMessageKey = this._messageKeyToGlobalizeKey(messageKey);
 
-      var message = Globalize.formatMessage(
-        globalizeMessageKey, data === null ? undefined : data
+      var message = this._formatMessage(
+        locale, messageKey, globalizeMessageKey, data
       );
 
       return this._toMessage(message);
@@ -226,8 +228,26 @@ Translator.prototype = {
     return this._buildUntranslatedMessage(locale, key, messageKey, data);
   },
 
+  _normalizeKey: function(key) {
+    return key ? key.replace(NORMALIZE_KEY_REGEXP, '') : key;
+  },
+
   _toMessage: function(text) {
     return this._config.noEscape ? text : escape(text);
+  },
+
+  _formatMessage: function(locale, messageKey, globalizeMessageKey, data) {
+    var message;
+
+    try {
+      message = Globalize.formatMessage(
+        globalizeMessageKey, data === null ? undefined : data
+      );
+    } catch (e) {
+      message = get(this._messages, [ locale, messageKey ]);
+    }
+
+    return message;
   },
 
   _loadMessages: function(json) {
@@ -285,8 +305,8 @@ Translator.prototype = {
 
       Globalize.locale(config.baseLocale);
 
-      message = Globalize.formatMessage(
-        globalizeMessageKey, data === null ? undefined : data
+      message = this._formatMessage(
+        locale, messageKey, globalizeMessageKey, data
       );
 
       Globalize.locale(locale);
