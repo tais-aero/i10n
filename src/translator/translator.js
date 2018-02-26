@@ -1,5 +1,8 @@
 'use strict';
 
+// TODO: optimize: don't use baseLocale
+
+var assign = require('lodash/object/assign');
 var merge = require('lodash/object/merge');
 var get = require('lodash/object/get');
 var escape = require('lodash/string/escape');
@@ -184,7 +187,9 @@ Translator.prototype = {
         localeMessages[messageKey] = message;
       });
 
-      messages[locale] = localeMessages;
+      messages[locale] = messages[locale] ?
+        assign(messages[locale], localeMessages) :
+        localeMessages;
     });
 
     this._loadMessages(messages);

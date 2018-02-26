@@ -393,6 +393,9 @@ describe('translator', function() {
     });
 
     describe('load messages from PO', function() {
+      it.skip('// TODO: PO modules', function() {
+      });
+
       it('get messages', function() {
         translator.loadMessagesFromPo([
           fs.readFileSync('test/data/po/ru.po', 'utf8'),
