@@ -23,6 +23,7 @@ Globalize.load(
 
 var utils = require('src/core/utils');
 var poUtils = require('src/core/po/utils');
+var POT = require('src/core/po/pot');
 
 // -----------------------------------------------------------------------------
 
@@ -38,6 +39,8 @@ var NORMALIZE_KEY_REGEXP = /\t/g;
  * Default config
  */
 var DEFAULT_CONFIG = {
+  runtimeCollectKeys: false,
+
   /**
    * Base locale for message keys
    */
@@ -78,6 +81,9 @@ var LOCALE_PROPERTY_NAME = '_locale_';
  * Translator class
  */
 var Translator = function() {
+  //
+  this._runtimeMessages = {};
+
   this.setConfig();
   this.setLocale(this._config.baseLocale);
 };
@@ -113,6 +119,10 @@ Translator.prototype = {
    * @returns {String} Default locale.
    */
   setLocale: function(locale) {
+    if (this._config.runtimeCollectKeys && !this._runtimeMessages[locale]) {
+      this._runtimeMessages[locale] = {};
+    }
+
     var cldr = Globalize.locale(locale);
     return cldr.locale;
   },
@@ -218,9 +228,13 @@ Translator.prototype = {
 
     var messageKey = utils.buildMessageKey(key, context);
     var locale = this.getLocale();
-    var isTranslated = get(this._messages, [ locale, messageKey ]);
+    var translated = get(this._messages, [ locale, messageKey ]);
 
-    if (isTranslated) {
+    if (this._config.runtimeCollectKeys) {
+      this._runtimeMessages[locale][messageKey] = translated || '';
+    }
+
+    if (translated) {
       var globalizeMessageKey = this._messageKeyToGlobalizeKey(messageKey);
 
       var message = this._formatMessage(
@@ -231,6 +245,35 @@ Translator.prototype = {
     }
 
     return this._buildUntranslatedMessage(locale, key, messageKey, data);
+  },
+
+  _getRuntimePo: function(locale) {
+    if (!this._config.runtimeCollectKeys) {
+      return '';
+    }
+
+    var runtimeMessages = this._runtimeMessages[locale];
+
+    var poHeaders = merge({}, POT.PO_HEADERS, {
+      'Language': locale || ''
+    });
+
+    var json = {
+      headers: poHeaders,
+      items: []
+    };
+
+    forEach(runtimeMessages, function(translated, messageKey) {
+      var k = utils.unbuildMessageKey(messageKey);
+
+      json.items.push({
+        msgid: k.key,
+        msgctxt: k.context,
+        msgstr: [ translated ]
+      });
+    });
+
+    return poUtils.jsonToPo(json);
   },
 
   _normalizeKey: function(key) {
