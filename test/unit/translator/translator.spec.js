@@ -5,6 +5,7 @@ var expect = chai.expect;
 var fs = require('fs');
 
 var cloneDeep = require('lodash/lang/cloneDeep');
+var unescape = require('lodash/string/unescape');
 
 var testUtils = require('test/utils');
 
@@ -110,6 +111,9 @@ describe('translator', function() {
         expect(translator.message('<a>Key</a>')).to.be.equal(
           '&lt;a&gt;Key&lt;/a&gt;'
         );
+        expect(unescape(translator.message('<a>Key</a>'))).to.be.equal(
+          '<a>Key</a>'
+        );
     });
 
     it('not base locale', function() {
@@ -124,12 +128,21 @@ describe('translator', function() {
         expect(translator.message('Key')).to.be.equal(
           '&lt;div click=&quot;alert(&#39;XSS&#39;)&quot;&gt;&lt;/div&gt;'
         );
+        expect(unescape(translator.message('Key'))).to.be.equal(
+          '<div click="alert(\'XSS\')"></div>'
+        );
 
         expect(translator.message('<a>Key</a>')).to.be.equal(
           '<b class="untranslated" data-locale="en">&lt;a&gt;Key&lt;/a&gt;</b>'
         );
+        expect(unescape(translator.message('<a>Key</a>'))).to.be.equal(
+          '<b class="untranslated" data-locale="en"><a>Key</a></b>'
+        );
 
         expect(translator.message('blah-blah-blah')).to.be.equal(
+          '<b class="untranslated" data-locale="en">blah-blah-blah</b>'
+        );
+        expect(unescape(translator.message('blah-blah-blah'))).to.be.equal(
           '<b class="untranslated" data-locale="en">blah-blah-blah</b>'
         );
     });
@@ -152,6 +165,7 @@ describe('translator', function() {
     it('base locale', function() {
         translator.setLocale('ru');
         expect(translator.message('<a>Key</a>')).to.be.equal('<a>Key</a>');
+        expect(unescape(translator.message('<a>Key</a>'))).to.be.equal('<a>Key</a>');
     });
 
     it('not base locale', function() {
@@ -166,12 +180,21 @@ describe('translator', function() {
         expect(translator.message('Key')).to.be.equal(
           '<div click="alert(\'XSS\')"></div>'
         );
+        expect(unescape(translator.message('Key'))).to.be.equal(
+          '<div click="alert(\'XSS\')"></div>'
+        );
 
         expect(translator.message('<a>Key</a>')).to.be.equal(
           '<b class="untranslated" data-locale="en"><a>Key</a></b>'
         );
+        expect(unescape(translator.message('<a>Key</a>'))).to.be.equal(
+          '<b class="untranslated" data-locale="en"><a>Key</a></b>'
+        );
 
         expect(translator.message('blah-blah-blah')).to.be.equal(
+          '<b class="untranslated" data-locale="en">blah-blah-blah</b>'
+        );
+        expect(unescape(translator.message('blah-blah-blah'))).to.be.equal(
           '<b class="untranslated" data-locale="en">blah-blah-blah</b>'
         );
     });
