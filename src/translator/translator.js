@@ -285,13 +285,12 @@ Translator.prototype = {
   },
 
   _formatMessage: function(locale, messageKey, globalizeMessageKey, data) {
+    var formatter = this._globalizeFormatters[locale][globalizeMessageKey];
     var message;
 
-    try {
-      message = Globalize.formatMessage(
-        globalizeMessageKey, data === null ? undefined : data
-      );
-    } catch (e) {
+    if (formatter) {
+      message = data === null ? formatter() : formatter(data);
+    } else {
       message = get(this._messages, [ locale, messageKey ]);
     }
 
@@ -327,6 +326,31 @@ Translator.prototype = {
 
     me._messages = rawJson;
     Globalize.loadMessages(globalizeJson);
+
+    // Precompile formatters
+    var globalizeLocale = null;
+    var globalizeFormatters = {};
+
+    forEach(globalizeJson, function(messages, locale) {
+      var formatters = {};
+
+      globalizeLocale = globalizeLocale || locale;
+      Globalize.locale(locale);
+
+      forEach(messages, function(message, globalizeMessageKey) {
+        var formatter = message ?
+          Globalize.messageFormatter(globalizeMessageKey) : null;
+        formatters[globalizeMessageKey] = formatter;
+      });
+
+      globalizeFormatters[locale] = formatters;
+    });
+
+    if (globalizeLocale) {
+      Globalize.locale(globalizeLocale);
+    }
+
+    me._globalizeFormatters = globalizeFormatters;
   },
 
   _messageKeyToGlobalizeKey: function(messageKey) {
@@ -340,24 +364,19 @@ Translator.prototype = {
   // TODO: FIXME: deduplicate code, see: Translator::message(...)
   _buildUntranslatedMessage: function(locale, key, messageKey, data) {
     var config = this._config;
-
-    if (!config.untranslatedMessageTemplate || locale === config.baseLocale) {
-      return this._toMessage(key);
-    }
-
     var message = key;
     var isKey = get(this._messages, [ config.baseLocale, messageKey ]);
 
     if (isKey) {
       var globalizeMessageKey = this._messageKeyToGlobalizeKey(messageKey);
 
-      Globalize.locale(config.baseLocale);
-
       message = this._formatMessage(
-        locale, messageKey, globalizeMessageKey, data
+        config.baseLocale, messageKey, globalizeMessageKey, data
       );
+    }
 
-      Globalize.locale(locale);
+    if (!config.untranslatedMessageTemplate || locale === config.baseLocale) {
+      return this._toMessage(message);
     }
 
     var templateData = {};
