@@ -289,8 +289,14 @@ Translator.prototype = {
     var message;
 
     if (formatter) {
-      message = data === null ? formatter() : formatter(data);
-    } else {
+      try {
+        message = data === null ? formatter() : formatter(data);
+      } catch (e) {
+        // NOOP
+      }
+    }
+
+    if (!message) {
       message = get(this._messages, [ locale, messageKey ]);
     }
 
