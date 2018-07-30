@@ -222,6 +222,10 @@ Translator.prototype = {
   message: function(/*key, context, data*/) {
     var args = utils.buildMessageArguments.apply(this, arguments);
 
+    if (this._config.transformKey) {
+      args.key = this._config.transformKey(args.key);
+    }
+
     var key = this._normalizeKey(args.key);
     var context = args.context;
     var data = args.data;
@@ -234,6 +238,8 @@ Translator.prototype = {
       this._runtimeMessages[locale][messageKey] = translated || '';
     }
 
+    var result;
+
     if (translated) {
       var globalizeMessageKey = this._messageKeyToGlobalizeKey(messageKey);
 
@@ -241,10 +247,16 @@ Translator.prototype = {
         locale, messageKey, globalizeMessageKey, data
       );
 
-      return this._toMessage(message);
+      result = this._toMessage(message);
+    } else {
+      result = this._buildUntranslatedMessage(locale, key, messageKey, data);
     }
 
-    return this._buildUntranslatedMessage(locale, key, messageKey, data);
+    if (this._config.transformMessage) {
+      return this._config.transformMessage(result);
+    }
+
+    return result;
   },
 
   _getRuntimePo: function(locale) {

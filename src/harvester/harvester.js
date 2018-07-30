@@ -126,7 +126,8 @@ Harvester.prototype = {
   /**
    * TODO: docs
    */
-  collectKeyItemsFromFiles: function(keyItems, cwd, pattern, excludes) {
+  collectKeyItemsFromFiles: function(
+    keyItems, cwd, pattern, excludes, getFileType, transformFile, transformKey) {
     keyItems = keyItems || {};
 
     var me = this;
@@ -141,17 +142,30 @@ Harvester.prototype = {
       'js': me.collectKeyItemsFromJs
     };
 
-    var executeCollectKeyItems = function(func, file) {
-      func.call(me, keyItems, me._readFileRelative(cwd, file), file);
+    var executeCollectKeyItems = function(func, file, content) {
+      func.call(me, keyItems, content, file, transformKey);
     };
 
     files.forEach(function(file) {
       var type = path.extname(file).toLowerCase().replace('.', '');
+
+      if (getFileType) {
+        type = getFileType(file, type);
+      }
+
       var byFileType = byFileTypes[type];
 
-      if (byFileType) {
-        executeCollectKeyItems(byFileType, file);
+      if (!byFileType) {
+        return;
       }
+
+      var content = me._readFileRelative(cwd, file);
+
+      if (transformFile) {
+        content = transformFile(content, file);
+      }
+
+      executeCollectKeyItems(byFileType, file, content);
     });
 
     return keyItems;
@@ -160,7 +174,7 @@ Harvester.prototype = {
   /**
    * TODO: docs
    */
-  collectKeyItemsFromHandlebarsTemplate: function(keyItems, input, file) {
+  collectKeyItemsFromHandlebarsTemplate: function(keyItems, input, file, transformKey) {
     keyItems = keyItems || {};
 
     var me = this;
@@ -171,7 +185,7 @@ Harvester.prototype = {
       pre: function(node) {
         if (me._isHandlebarsMessageHelper(node)) {
           var keyItem =
-            me._extractKeyItemFromHandlebarsNode(node, config);
+            me._extractKeyItemFromHandlebarsNode(node, config, transformKey);
 
           me._setKeyItemLocationSrc(keyItem, file);
           me._pushKeyItem(keyItems, keyItem);
@@ -800,7 +814,7 @@ Harvester.prototype = {
       );
   },
 
-  _extractKeyItemFromHandlebarsNode: function(node, config) {
+  _extractKeyItemFromHandlebarsNode: function(node, config, transformKey) {
     var keyNode = node.params[config.messageKey.index];
     var contextNode = node.params[config.messageContext.index];
 
@@ -815,6 +829,10 @@ Harvester.prototype = {
     var keyItem = {
       key: (keyNode && keyNode.original) || null
     };
+
+    if (keyItem.key && transformKey) {
+      keyItem.key = transformKey(keyItem.key);
+    }
 
     keyItem.context =
       (keyItem.key && contextNode && contextNode.original) || null;
