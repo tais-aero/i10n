@@ -6,9 +6,9 @@
   "license": "MIT",
   "devDependencies": {
     "jscs": "3.0.7",
-    "jshint": "2.9.4",
+    "jshint": "2.9.6",
     "chai": "4.1.2",
-    "mocha": "4.0.1"
+    "mocha": "5.2.0"
   },
   "dependencies": {
     "acorn": "5.2.1",
