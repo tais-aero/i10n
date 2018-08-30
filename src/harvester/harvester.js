@@ -124,16 +124,32 @@ Harvester.prototype = {
   },
 
   /**
-   * TODO: docs
+   * Collect keyItems from files
+   *
+   * @param {Object} [options={}] The options object.
+   * @param {Object} [options.keyItems={}]
+   *  TODO
+   * @param {String} [options.cwd]
+   *  TODO
+   * @param {String} [options.pattern]
+   *  TODO
+   * @param {Array} [options.excludes]
+   *  TODO
+   * @param {Function} [options.getFileType]
+   *  TODO
+   * @param {Function} [options.transformFile]
+   *  TODO
+   * @param {Function} [options.transformKey]
+   *  TODO
    */
-  collectKeyItemsFromFiles: function(
-    keyItems, cwd, pattern, excludes, getFileType, transformFile, transformKey) {
-    keyItems = keyItems || {};
+  collectKeyItemsFromFiles: function(options) {
+    options = options || {};
+    var keyItems = options.keyItems || {};
 
     var me = this;
-    var files = glob.sync(pattern, {
-      cwd: cwd,
-      ignore: excludes,
+    var files = glob.sync(options.pattern, {
+      cwd: options.cwd,
+      ignore: options.excludes,
       nodir: true
     });
 
@@ -143,14 +159,19 @@ Harvester.prototype = {
     };
 
     var executeCollectKeyItems = function(func, file, content) {
-      func.call(me, keyItems, content, file, transformKey);
+      func.call(me, {
+        keyItems: keyItems,
+        input: content,
+        file: file,
+        transformKey: options.transformKey
+      });
     };
 
     files.forEach(function(file) {
       var type = path.extname(file).toLowerCase().replace('.', '');
 
-      if (getFileType) {
-        type = getFileType(file, type);
+      if (options.getFileType) {
+        type = options.getFileType(file, type);
       }
 
       var byFileType = byFileTypes[type];
@@ -159,10 +180,10 @@ Harvester.prototype = {
         return;
       }
 
-      var content = me._readFileRelative(cwd, file);
+      var content = me._readFileRelative(options.cwd, file);
 
-      if (transformFile) {
-        content = transformFile(content, file);
+      if (options.transformFile) {
+        content = options.transformFile(content, file);
       }
 
       executeCollectKeyItems(byFileType, file, content);
@@ -171,23 +192,34 @@ Harvester.prototype = {
     return keyItems;
   },
 
-  /**
-   * TODO: docs
-   */
-  collectKeyItemsFromHandlebarsTemplate: function(keyItems, input, file, transformKey) {
-    keyItems = keyItems || {};
+   /**
+    * Collect keyItems from Handlebars template
+    *
+    * @param {Object} [options={}] The options object.
+    * @param {Object} [options.keyItems={}]
+    *  TODO
+    * @param {String} [options.input]
+    *  TODO
+    * @param {String} [options.file]
+    *  TODO
+    * @param {Function} [options.transformKey]
+    *  TODO
+    */
+  collectKeyItemsFromHandlebarsTemplate: function(options) {
+    var keyItems = options.keyItems || {};
 
     var me = this;
     var config = me._config.handlebars;
-    var ast = me._parseHandlebarsTemplate(input);
+    var ast = me._parseHandlebarsTemplate(options.input);
 
     astTraverse(ast, {
       pre: function(node) {
         if (me._isHandlebarsMessageHelper(node)) {
-          var keyItem =
-            me._extractKeyItemFromHandlebarsNode(node, config, transformKey);
+          var keyItem = me._extractKeyItemFromHandlebarsNode(
+            node, config, options.transformKey
+          );
 
-          me._setKeyItemLocationSrc(keyItem, file);
+          me._setKeyItemLocationSrc(keyItem, options.file);
           me._pushKeyItem(keyItems, keyItem);
         }
       }
@@ -197,20 +229,30 @@ Harvester.prototype = {
   },
 
   /**
-   * TODO: docs
+   * Collect keyItems from JS
+   *
+   * @param {Object} [options={}] The options object.
+   * @param {Object} [options.keyItems={}]
+   *  TODO
+   * @param {String} [options.input]
+   *  TODO
+   * @param {String} [options.file]
+   *  TODO
+   * // @param {Function} [options.transformKey]
+   * //  TODO
    */
-  collectKeyItemsFromJs: function(keyItems, input, file) {
-    keyItems = keyItems || {};
+  collectKeyItemsFromJs: function(options) {
+    var keyItems = options.keyItems || {};
 
     var me = this;
     var config = me._config.js;
-    var ast = me._parseJs(input);
+    var ast = me._parseJs(options.input);
 
     astTraverse(ast, {
       pre: function(node) {
         if (me._isJsMessage(node)) {
           var keyItem = me._extractKeyItemFromJsNode(node, config);
-          me._setKeyItemLocationSrc(keyItem, file);
+          me._setKeyItemLocationSrc(keyItem, options.file);
           me._pushKeyItem(keyItems, keyItem);
         }
       }
@@ -220,17 +262,28 @@ Harvester.prototype = {
   },
 
   /**
-   * TODO: docs
+   * Build PO files
+   *
+   * @param {Object} [options={}] The options object.
+   * @param {Object} [options.keyItems={}]
+   *  TODO
+   * @param {Array} [options.locales]
+   *  TODO
+   * @param {String} [options.poFileDir]
+   *  TODO
+   * @param {Array} [options.poFileBaseName]
+   *  TODO
    */
-  // TODO: normalize PO after msgmerge
-  buildPoFiles: function(keyItems, locales, poFileDir, poFileBaseName) {
+   // TODO: normalize PO after msgmerge
+  buildPoFiles: function(options) {
     var me = this;
 
-    var potFile = me._createPotFile(keyItems, poFileDir);
+    var potFile = me._createPotFile(options.keyItems, options.poFileDir);
 
-    locales.forEach(function(locale) {
+    options.locales.forEach(function(locale) {
       var poFile = path.resolve(
-        poFileDir, poFileBaseName + locale + '.' + me._config.PO_FILE_EXT
+        options.poFileDir,
+        options.poFileBaseName + locale + '.' + me._config.PO_FILE_EXT
       );
 
       // create empty po by locale, if not exists
@@ -253,10 +306,23 @@ Harvester.prototype = {
   },
 
   /**
-   * TODO: docs
+   * Wrap translation texts in files
+   *
+   * @param {Object} [options={}] The options object.
+   * @param {String} [options.cwd]
+   *  TODO
+   * @param {String} [options.pattern]
+   *  TODO
+   * @param {Array} [options.excludes]
+   *  TODO
+   * @param {Object} [options.byTypeWrapOptions]
+   *  TODO
+   * @param {Function} [options.resultCallback]
+   *  TODO
+   * @param {Boolean} [options.verbose=false]
+   *  TODO
    */
-  wrapTranslationTextsInFiles: function(cwd, pattern, excludes, options,
-                                        resultCallback, verbose) {
+  wrapTranslationTextsInFiles: function(options) {
     var me = this;
 
     var byFileTypes = {
@@ -274,15 +340,15 @@ Harvester.prototype = {
     };
 
     var doResult = function(err) {
-      resultCallback(err || null, result);
+      options.resultCallback(err || null, result);
     };
 
     var executeWrapTranslationTextsInFile = function(func, file, wrapOptions,
                                                      callback) {
-      func.call(me, path.resolve(cwd, file), wrapOptions, function(r) {
+      func.call(me, path.resolve(options.cwd, file), wrapOptions, function(r) {
         result.stat.counts.wrappedTexts += r.stat.counts.wrappedTexts;
 
-        if (verbose) {
+        if (options.verbose) {
           result.files.push({
             name: file,
             stat: r.stat
@@ -293,9 +359,9 @@ Harvester.prototype = {
       });
     };
 
-    var globber = new glob.Glob(pattern, {
-      cwd: cwd,
-      ignore: excludes,
+    var globber = new glob.Glob(options.pattern, {
+      cwd: options.cwd,
+      ignore: options.excludes,
       nodir: true
     });
 
@@ -308,7 +374,7 @@ Harvester.prototype = {
           return;
         }
 
-        var wrapOptions = options[type];
+        var wrapOptions = options.byTypeWrapOptions[type];
 
         globber.pause();
 
