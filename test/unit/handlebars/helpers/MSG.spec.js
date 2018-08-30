@@ -1,4 +1,8 @@
-//
+/* jshint -W003 */
+/* jshint -W030 */
+
+'use strict';
+
 var chai = require('chai');
 var expect = chai.expect;
 

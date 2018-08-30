@@ -1,10 +1,10 @@
-//
+/* jshint -W003 */
+/* jshint -W030 */
+
+'use strict';
+
 var chai = require('chai');
 var expect = chai.expect;
-
-var fs = require('fs');
-
-var testUtils = require('test/utils');
 
 // -----------------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ describe('core/utils', function() {
   });
 
   it('#toStringIndex', function() {
-    var text = '1\n23\r\n456\n7890'
+    var text = '1\n23\r\n456\n7890';
 
     expect(utils.toStringIndex(text, 1, 1)).to.equal(1);
 
