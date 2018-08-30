@@ -1,4 +1,8 @@
-//
+/* jshint -W003 */
+/* jshint -W030 */
+
+'use strict';
+
 var chai = require('chai');
 var expect = chai.expect;
 
@@ -9,7 +13,6 @@ var glob = require('glob');
 var map = require('lodash/collection/map');
 var flatten = require('lodash/array/flatten');
 var endsWith = require('lodash/string/endsWith');
-var isNumber = require('lodash/lang/isNumber');
 var defaultsDeep = require('lodash/object/defaultsDeep');
 
 var testUtils = require('test/utils');
@@ -40,7 +43,10 @@ describe('harvester', function() {
       var keyItems = {};
 
       var keyItemsRet =
-        harvester.collectKeyItemsFromHandlebarsTemplate(keyItems, template);
+        harvester.collectKeyItemsFromHandlebarsTemplate({
+          keyItems: keyItems,
+          input: template
+        });
 
       // console.log(testUtils.stringifyObject(keyItems));
 
@@ -161,10 +167,10 @@ describe('harvester', function() {
         ''
       ].join('\n'));
 
-      var keyItems = {};
-
-      var keyItemsRet =
-        harvester.collectKeyItemsFromHandlebarsTemplate(keyItems, template);
+      var keyItems = harvester.collectKeyItemsFromHandlebarsTemplate({
+          keyItems: null,
+          input: template
+        });
 
       // console.log(testUtils.stringifyObject(keyItems));
 
@@ -221,7 +227,10 @@ describe('harvester', function() {
       var keyItems = {};
 
       var keyItemsRet =
-        harvester.collectKeyItemsFromJs(keyItems, template);
+        harvester.collectKeyItemsFromJs({
+          keyItems: keyItems,
+          input: template
+        });
 
       // console.log(testUtils.stringifyObject(keyItems));
 
@@ -332,10 +341,12 @@ describe('harvester', function() {
     });
 
     it('from files', function() {
-      var keyItems = {};
-      var keyItemsRet = harvester.collectKeyItemsFromFiles(
-        keyItems, 'test/data', '**/0.+(js|handlebars)', null
-      );
+      var keyItems = harvester.collectKeyItemsFromFiles({
+        keyItems: null,
+        cwd: 'test/data',
+        pattern: '**/0.+(js|handlebars)',
+        excludes: null
+      });
 
       var sources = flatten(map(keyItems, function(items) {
           return map(items, function(item) {
@@ -361,16 +372,23 @@ describe('harvester', function() {
     });
 
     it('build PO files', function() {
-      var keyItems = {};
-      var keyItemsRet = harvester.collectKeyItemsFromFiles(
-        keyItems, 'test/data', '**/0.+(js|handlebars)', null
-      );
+      var keyItems = harvester.collectKeyItemsFromFiles({
+        keyItems: null,
+        cwd: 'test/data',
+        pattern: '**/0.+(js|handlebars)',
+        excludes: null
+      });
 
       var locales = [ 'ru', 'en' ];
       var poFileDir = 'test/tmp/po';
       var poFileBaseName = 'test_';
 
-      harvester.buildPoFiles(keyItems, locales, poFileDir, poFileBaseName);
+      harvester.buildPoFiles({
+        keyItems: keyItems,
+        locales: locales,
+        poFileDir: poFileDir,
+        poFileBaseName: poFileBaseName
+      });
     });
   });
 
@@ -424,14 +442,15 @@ describe('harvester', function() {
       fs.removeSync(targetDir);
       fs.copySync(srcDir, targetDir);
 
-      harvester.wrapTranslationTextsInFiles(
-        targetDir,
-        pattern,
-        null, {
+      harvester.wrapTranslationTextsInFiles({
+        cwd: targetDir,
+        pattern: pattern,
+        excludes: null,
+        byTypeWrapOptions: {
           handlebars: HANDLEBARS_WRAP_OPTIONS,
           js: JS_WRAP_OPTIONS
         },
-        function(err, result) {
+        resultCallback: function(err, result) {
           expect(err).to.be.null;
           expect(result.files).to.have.lengthOf(12);
           expect(result.stat.counts.wrappedTexts).to.be.at.least(1);
@@ -472,8 +491,8 @@ describe('harvester', function() {
 
           done();
         },
-        true
-      );
+        verbose: true
+      });
     });
 
     describe('TAIS', function() {

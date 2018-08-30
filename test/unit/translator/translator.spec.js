@@ -1,4 +1,8 @@
-//
+/* jshint -W003 */
+/* jshint -W030 */
+
+'use strict';
+
 var chai = require('chai');
 var expect = chai.expect;
 
@@ -7,7 +11,7 @@ var fs = require('fs');
 var cloneDeep = require('lodash/lang/cloneDeep');
 var unescape = require('lodash/string/unescape');
 
-var testUtils = require('test/utils');
+// var testUtils = require('test/utils');
 
 // -----------------------------------------------------------------------------
 
@@ -493,14 +497,15 @@ describe('translator', function() {
   describe('aliases', function() {
       it('msg', function() {
         var messageByKey = 'Message';
+
         translator.loadMessages({
           en: {
-            'Key': 'Message'
+            'Key': messageByKey
           }
         });
 
         translator.setLocale('en');
-        expect(translator.msg('Key')).to.be.equal('Message');
+        expect(translator.msg('Key')).to.be.equal(messageByKey);
       });
   });
 });

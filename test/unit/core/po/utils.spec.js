@@ -1,4 +1,8 @@
-//
+/* jshint -W003 */
+/* jshint -W030 */
+
+'use strict';
+
 var chai = require('chai');
 var expect = chai.expect;
 
@@ -9,7 +13,6 @@ var testUtils = require('test/utils');
 // -----------------------------------------------------------------------------
 
 var poUtils = require('src/core/po/utils');
-var POT = require('src/core/po/pot');
 
 describe('core/po/utils', function() {
   it('#poToJson', function() {
