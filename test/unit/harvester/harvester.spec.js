@@ -30,6 +30,14 @@ var JS_WRAP_OPTIONS = {
   message: 'msg'
 };
 
+var LUA_WRAP_OPTIONS = {
+  checkSpaces: true,
+  translatorRequireTemplate: "{translator} = require('{translatorRequire}').translator",
+  translatorRequire: 'L10n',
+  translator: 'tr',
+  message: 'msg'
+};
+
 var HANDLEBARS_WRAP_OPTIONS = {
   message: 'MSG'
 };
@@ -415,6 +423,28 @@ describe('harvester', function() {
       });
     });
 
+    describe('Lua', function() {
+      it('clean (without tr)', function() {
+        test_wrapTranslationTextsInLua('test/data/wrap-translation/lua/clean');
+      });
+
+      it('dirty (with tr and spaces)', function() {
+        test_wrapTranslationTextsInLua('test/data/wrap-translation/lua/dirty');
+      });
+
+      it('empty (no wrap)', function() {
+        test_wrapTranslationTextsInLua('test/data/wrap-translation/lua/empty');
+      });
+
+      it('test', function() {
+        var wrapOptions = defaultsDeep({
+          checkSpaces: false
+        }, LUA_WRAP_OPTIONS);
+
+        test_wrapTranslationTextsInLua('test/data/wrap-translation/lua/test', true, wrapOptions);
+      });
+    });
+
     describe('Handlebars template', function() {
       it('clean (HTML only)', function(done) {
         test_wrapTranslationTextsInHandlebars('test/data/wrap-translation/templates/handlebars/clean', done);
@@ -437,7 +467,8 @@ describe('harvester', function() {
       var dir = 'wrap-translation';
       var srcDir = path.resolve('test/data', dir);
       var targetDir = path.resolve('test/tmp', dir);
-      var pattern = '**/!(test|test_wrapped).+(js|handlebars)';
+      var pattern = '**/!(test|test_wrapped).+(js|lua|handlebars)';
+      var expectedFileCount = 18;
 
       fs.removeSync(targetDir);
       fs.copySync(srcDir, targetDir);
@@ -447,18 +478,19 @@ describe('harvester', function() {
         pattern: pattern,
         excludes: null,
         byTypeWrapOptions: {
-          handlebars: HANDLEBARS_WRAP_OPTIONS,
-          js: JS_WRAP_OPTIONS
+          js: JS_WRAP_OPTIONS,
+          lua: LUA_WRAP_OPTIONS,
+          handlebars: HANDLEBARS_WRAP_OPTIONS
         },
         resultCallback: function(err, result) {
           expect(err).to.be.null;
-          expect(result.files).to.have.lengthOf(12);
+          expect(result.files).to.have.lengthOf(expectedFileCount);
           expect(result.stat.counts.wrappedTexts).to.be.at.least(1);
 
           var wrappedTextsCount = 0;
 
           result.files.forEach(function(file) {
-            expect(file.name).to.match(/\.(js|handlebars)$/);
+            expect(file.name).to.match(/\.(js|lua|handlebars)$/);
             wrappedTextsCount += file.stat.counts.wrappedTexts;
           });
 
@@ -530,7 +562,26 @@ function test_wrapTranslationTextsInJs(file, dump, wrapOptions) {
   assert_wrapTranslationTextsInJs(result.wrapped, result, expextedJs);
 }
 
-//
+function test_wrapTranslationTextsInLua(file, dump, wrapOptions) {
+  wrapOptions = wrapOptions || LUA_WRAP_OPTIONS;
+
+  var lua = fs.readFileSync(
+    file + '.lua', 'utf8'
+  );
+
+  var expextedLua = fs.readFileSync(
+    file + '_wrapped.lua', 'utf8'
+  );
+
+  var result = harvester.wrapTranslationTextsInLua(lua, wrapOptions);
+  dump && fs.outputFileSync('test/tmp/' + file + '_wrapped.lua', result.wrapped);
+  assert_wrapTranslationTextsInLua(lua, result, expextedLua);
+
+  result = harvester.wrapTranslationTextsInLua(result.wrapped, wrapOptions);
+  dump && fs.outputFileSync('test/tmp/' + file + '_wrapped_2.lua', result.wrapped);
+  assert_wrapTranslationTextsInLua(result.wrapped, result, expextedLua);
+}
+
 function test_wrapTranslationTextsInHandlebars(file, done, dump, wrapOptions) {
   wrapOptions = wrapOptions || HANDLEBARS_WRAP_OPTIONS;
 
@@ -570,6 +621,10 @@ function assert_wrapTranslationTexts(mathRegexp, input, result, expected) {
 }
 
 function assert_wrapTranslationTextsInJs(input, result, expected) {
+  assert_wrapTranslationTexts(/[^a-z]tr\./g, input, result, expected);
+}
+
+function assert_wrapTranslationTextsInLua(input, result, expected) {
   assert_wrapTranslationTexts(/[^a-z]tr\./g, input, result, expected);
 }
 

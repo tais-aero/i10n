@@ -10,6 +10,7 @@ var repeat = require('lodash/string/repeat');
 var Handlebars = require('handlebars');
 var parse5 = require('parse5');
 var acorn = require('acorn');
+var luaparse = require('luaparse');
 var escodegen = require('escodegen');
 var astTraverse = require('ast-traverse');
 var glob = require('glob');
@@ -40,12 +41,15 @@ var DEFAULT_ENCODING = 'utf-8';
 
 var RU_TEXT_REGEXP = /[№а-я]/i;
 
+var JS_WRAP_EXCLUDE_PROPERTIES = [ 'key' ];
+
+// TODO:
+var LUA_WRAP_EXCLUDE_PROPERTIES = [];
+
 var HANDLEBARS_REGEXP = /{{!--[\s\S]+?--}}|{{[\s\S]+?}}/g;
 var HANDLEBARS_MASK_CHAR = '\u2060'; // WORD JOINER
 var HANDLEBARS_UNMASK_REGEXP = /[^\u2060]+/g;
-var HANDLEBARS__WRAP_EXCLUDE_PROPERTIES = [ 'path' ];
-
-var JS_WRAP_EXCLUDE_PROPERTIES = [ 'key' ];
+var HANDLEBARS_WRAP_EXCLUDE_PROPERTIES = [ 'path' ];
 
 /**
  * Default config
@@ -88,6 +92,25 @@ var DEFAULT_CONFIG = {
     },
     wrap: {
       nodeTypes: [ 'Literal' ],
+      wrapTargetRegExp: RU_TEXT_REGEXP
+    }
+  },
+
+  lua: {
+    nodeTypes: [ 'CallExpression' ],
+    nodeCalleeObjectNames: [ 'translator', 'tr' ],
+    nodeCalleePropertyNames: [ 'message', 'msg' ],
+    // TODO:
+    // messageKey: {
+    //   index: 0,
+    //   types: [ 'Literal', 'BinaryExpression' ]
+    // },
+    // messageContext: {
+    //   index: 1,
+    //   types: [ 'Literal', 'BinaryExpression' ]
+    // },
+    wrap: {
+      nodeTypes: [ 'StringLiteral' ],
       wrapTargetRegExp: RU_TEXT_REGEXP
     }
   }
@@ -326,8 +349,9 @@ Harvester.prototype = {
     var me = this;
 
     var byFileTypes = {
-      'handlebars': me.wrapTranslationTextsInHandlebarsFile,
-      'js': me.wrapTranslationTextsInJsFile
+      'js': me.wrapTranslationTextsInJsFile,
+      'lua': me.wrapTranslationTextsInLuaFile,
+      'handlebars': me.wrapTranslationTextsInHandlebarsFile
     };
 
     var result = {
@@ -414,6 +438,20 @@ Harvester.prototype = {
   /**
    * TODO: docs
    */
+  wrapTranslationTextsInLuaFile: function(filePath, options, resultCallback) {
+    var input = this._readFile(filePath);
+    var result = this.wrapTranslationTextsInLua(input, options);
+
+    if (result.stat.counts.wrappedTexts) {
+      this._writeFile(filePath, result.wrapped);
+    }
+
+    resultCallback(result);
+  },
+
+  /**
+   * TODO: docs
+   */
   wrapTranslationTextsInHandlebarsFile: function(filePath, options,
                                                  resultCallback) {
     var me = this;
@@ -431,6 +469,7 @@ Harvester.prototype = {
   /**
    * TODO: docs
    */
+  // TODO: deduplicate code, see: wrapTranslationTextsInLua
   wrapTranslationTextsInJs: function(input, options) {
     var me = this;
     var wrapBefore = options.translator + '.' + options.message + '(';
@@ -545,6 +584,121 @@ Harvester.prototype = {
   /**
    * TODO: docs
    */
+  // TODO: deduplicate code, see: wrapTranslationTextsInJs
+  wrapTranslationTextsInLua: function(input, options) {
+    var me = this;
+    var wrapBefore = options.translator + '.' + options.message + '(';
+    var wrapAfter = ')';
+    var concat = ' + ';
+    var offset = 0;
+    var offsetInc = wrapBefore.length + wrapAfter.length;
+    var translatorIsDeclared = false;
+    var isWrapped = false;
+    var ast = me._parseLua(input);
+
+    var stat = {
+      counts: {
+        wrappedTexts: 0
+      }
+    };
+
+    astTraverse(ast, {
+      pre: function(node) {
+        if (me._isNeedWrapLua(node)) {
+          var start = node.range[0] + offset;
+          var end = node.range[1] + offset;
+
+          var before = input.substr(0, start);
+          var after = input.substr(end);
+
+          var spacesBefore = '';
+          var spacesAfter = '';
+
+          var literal;
+
+          if (options.checkSpaces) {
+            literal = node.raw.replace(
+              /^["'](\s+)|(\s+)["']$/g,
+              function(match, leading, trailing) {
+                var quote = node.raw[0];
+
+                if (leading) {
+                  spacesBefore = quote + leading + quote + concat;
+                  offset += concat.length + 2;
+                  return quote;
+                }
+
+                if (trailing) {
+                  spacesAfter = concat + quote + trailing + quote;
+                  offset += concat.length + 2;
+                  return quote;
+                }
+
+                return match;
+              }
+            );
+          } else {
+            literal = node.raw;
+          }
+
+          input =
+            before + spacesBefore +
+            wrapBefore + literal + wrapAfter +
+            spacesAfter + after;
+
+          offset += offsetInc;
+
+          stat.counts.wrappedTexts++;
+
+          isWrapped = true;
+        }
+
+        if (node.type === 'CallExpression' &&
+            get(node, 'base.type') === 'Identifier' &&
+            get(node, 'base.name') === 'require' &&
+            get(node, 'arguments[0].value') === options.translatorRequire) {
+          translatorIsDeclared = true;
+        }
+      },
+
+      skipProperty: function(property, node) {
+        return includes(LUA_WRAP_EXCLUDE_PROPERTIES, property) ||
+          me._isLuaMessage(node);
+      }
+    });
+
+    if (isWrapped && !translatorIsDeclared) {
+      var translatorDeclare = utils.formatTemplate(
+        options.translatorRequireTemplate, null, {
+          translator: options.translator,
+          translatorRequire: options.translatorRequire
+        }
+      );
+
+      var useStrict = 'use strict';
+      var useStrictIndex = input.indexOf(useStrict);
+
+      if (useStrictIndex > 0) {
+        var cutIndex = useStrictIndex + useStrict.length + 2;
+
+        input =
+          input.substr(0, cutIndex) +
+          '\n\n' + translatorDeclare +
+          input.substr(cutIndex);
+      } else {
+        input = translatorDeclare + '\n\n' + input;
+      }
+    }
+
+    return {
+      wrapped: input,
+      stat: stat
+    };
+  },
+
+  /**
+   * TODO: docs
+   */
   wrapTranslationTextsInHandlebars: function(input, options, resultCallback) {
     var me = this;
     var htmlInfo;
@@ -609,7 +763,7 @@ Harvester.prototype = {
         },
 
         skipProperty: function(property, node) {
-          return includes(HANDLEBARS__WRAP_EXCLUDE_PROPERTIES, property) ||
+          return includes(HANDLEBARS_WRAP_EXCLUDE_PROPERTIES, property) ||
             me._isHandlebarsMessageHelper(node);
         }
       });
@@ -795,6 +949,14 @@ Harvester.prototype = {
       config.js.wrap.wrapTargetRegExp.test(node.value);
   },
 
+  _isNeedWrapLua: function(node) {
+    var config = this._config;
+
+    // TODO: regex?
+    return includes(config.lua.wrap.nodeTypes, node.type) &&
+      config.lua.wrap.wrapTargetRegExp.test(node.value);
+  },
+
   _createPotFile: function(keyItems, potFileDir) {
     var po = this._createPo(keyItems);
     var potFile = path.resolve(potFileDir, this._config.POT_FILE_NAME);
@@ -880,6 +1042,18 @@ Harvester.prototype = {
       );
   },
 
+  _isLuaMessage: function(node) {
+    var config = this._config;
+
+    return includes(config.lua.nodeTypes, node.type) &&
+      includes(
+        config.lua.nodeCalleeObjectNames, get(node, 'base.base.name')
+      ) &&
+      includes(
+        config.lua.nodeCalleePropertyNames, get(node, 'base.identifier.name')
+      );
+  },
+
   _extractKeyItemFromHandlebarsNode: function(node, config, transformKey) {
     var keyNode = node.params[config.messageKey.index];
     var contextNode = node.params[config.messageContext.index];
@@ -959,6 +1133,13 @@ Harvester.prototype = {
   _parseJs: function(input) {
     return acorn.parse(input, {
       locations: true
+    });
+  },
+
+  _parseLua: function(input) {
+    return luaparse.parse(input, {
+      locations: true,
+      ranges: true
     });
   },
 
