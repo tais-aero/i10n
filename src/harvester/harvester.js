@@ -13,6 +13,7 @@ var acorn = require('acorn');
 var luaparse = require('luaparse');
 var escodegen = require('escodegen');
 var astTraverse = require('ast-traverse');
+
 var glob = require('glob');
 var fs = require('fs-extra');
 var path = require('path');
@@ -100,15 +101,14 @@ var DEFAULT_CONFIG = {
     nodeTypes: [ 'CallExpression' ],
     nodeCalleeObjectNames: [ 'translator', 'tr' ],
     nodeCalleePropertyNames: [ 'message', 'msg' ],
-    // TODO:
-    // messageKey: {
-    //   index: 0,
-    //   types: [ 'Literal', 'BinaryExpression' ]
-    // },
-    // messageContext: {
-    //   index: 1,
-    //   types: [ 'Literal', 'BinaryExpression' ]
-    // },
+    messageKey: {
+      index: 0,
+      types: [ 'StringLiteral', 'BinaryExpression' ]
+    },
+    messageContext: {
+      index: 1,
+      types: [ 'StringLiteral', 'BinaryExpression' ]
+    },
     wrap: {
       nodeTypes: [ 'StringLiteral' ],
       wrapTargetRegExp: RU_TEXT_REGEXP
@@ -177,8 +177,9 @@ Harvester.prototype = {
     });
 
     var byFileTypes = {
-      'handlebars': me.collectKeyItemsFromHandlebarsTemplate,
-      'js': me.collectKeyItemsFromJs
+      'js': me.collectKeyItemsFromJs,
+      'lua': me.collectKeyItemsFromLua,
+      'handlebars': me.collectKeyItemsFromHandlebarsTemplate
     };
 
     var executeCollectKeyItems = function(func, file, content) {
@@ -275,6 +276,39 @@ Harvester.prototype = {
       pre: function(node) {
         if (me._isJsMessage(node)) {
           var keyItem = me._extractKeyItemFromJsNode(node, config);
+          me._setKeyItemLocationSrc(keyItem, options.file);
+          me._pushKeyItem(keyItems, keyItem);
+        }
+      }
+    });
+
+    return keyItems;
+  },
+
+  /**
+   * Collect keyItems from Lua
+   *
+   * @param {Object} [options={}] The options object.
+   * @param {Object} [options.keyItems={}]
+   *  TODO
+   * @param {String} [options.input]
+   *  TODO
+   * @param {String} [options.file]
+   *  TODO
+   * // @param {Function} [options.transformKey]
+   * //  TODO
+   */
+  collectKeyItemsFromLua: function(options) {
+    var keyItems = options.keyItems || {};
+
+    var me = this;
+    var config = me._config.lua;
+    var ast = me._parseLua(options.input);
+
+    astTraverse(ast, {
+      pre: function(node) {
+        if (me._isLuaMessage(node)) {
+          var keyItem = me._extractKeyItemFromLuaNode(node, config);
           me._setKeyItemLocationSrc(keyItem, options.file);
           me._pushKeyItem(keyItems, keyItem);
         }
@@ -1095,17 +1129,42 @@ Harvester.prototype = {
       includes(config.messageContext.types, get(contextNode, 'type')) ?
         contextNode : null;
 
-    var keyCode = this._generateJs(keyNode);
-
     var keyItem = {
-      key: this._evalJs(keyCode),
+      key: this._evalJsAst(keyNode),
       context: null,
       location: null
     };
 
     if (keyItem.key && contextNode) {
-      var contextCode = this._generateJs(contextNode);
-      keyItem.context = this._evalJs(contextCode);
+      keyItem.context = this._evalJsAst(contextNode);
+    }
+
+    keyItem.location =
+      (keyItem.key && keyNode && keyNode.loc) || null;
+
+    return keyItem;
+  },
+
+  _extractKeyItemFromLuaNode: function(node, config) {
+    var keyNode = node.arguments[config.messageKey.index];
+    var contextNode = node.arguments[config.messageContext.index];
+
+    keyNode =
+      includes(config.messageKey.types, get(keyNode, 'type')) ?
+        keyNode : null;
+
+    contextNode =
+      includes(config.messageContext.types, get(contextNode, 'type')) ?
+        contextNode : null;
+
+    var keyItem = {
+      key: this._evalLuaAst(keyNode),
+      context: null,
+      location: null
+    };
+
+    if (keyItem.key && contextNode) {
+      keyItem.context = this._evalLuaAst(contextNode);
     }
 
     keyItem.location =
@@ -1147,6 +1206,36 @@ Harvester.prototype = {
     return ast ? escodegen.generate(ast) : null;
   },
 
+  // only necessary! only strings!
+  _generateLuaAsJs: function(ast) {
+    if (!ast) {
+      return;
+    }
+
+    astTraverse(ast, {
+      pre: function(node) {
+        if (node.type === 'StringLiteral') {
+          node.type = 'Literal';
+        }
+
+        if (node.type === 'BinaryExpression') {
+          node.operator = '+';
+        }
+      }
+    });
+
+    // TODO: _generateJs supports [[...]] strings!
+    //        -> check for node and JS versions
+    var code = this._generateJs(ast);
+
+    return code;
+  },
+
+  _luaStringsToJsStrings: function(luaStrings) {
+    // TODO:
+    return luaStrings;
+  },
+
   _writeFile: function(filePath, data) {
     fs.outputFileSync(filePath, data);
   },
@@ -1166,6 +1255,16 @@ Harvester.prototype = {
     stringStream.push(null);
 
     return stringStream;
+  },
+
+  _evalJsAst: function(ast) {
+    var code = this._generateJs(ast);
+    return this._evalJs(code);
+  },
+
+  _evalLuaAst: function(ast) {
+    var code = this._generateLuaAsJs(ast);
+    return this._evalJs(code);
   },
 
   /* jshint ignore:start */

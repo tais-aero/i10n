@@ -44,6 +44,250 @@ var HANDLEBARS_WRAP_OPTIONS = {
 
 describe('harvester', function() {
   describe('collect keys', function() {
+    it('from JS', function() {
+      var template = fs.readFileSync(
+        'test/data/js/0.js', 'utf8'
+      );
+      var keyItems = {};
+
+      var keyItemsRet =
+        harvester.collectKeyItemsFromJs({
+          keyItems: keyItems,
+          input: template
+        });
+
+      // console.log(testUtils.stringifyObject(keyItems));
+
+      expect(keyItemsRet).to.equal(keyItems);
+
+      expect(testUtils.normalizeJson(keyItems)).to.deep.equal({
+        "Ключ 0_1\u0004Контекст 0_1": [
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 4,
+                "column": 2
+              },
+              "end": {
+                "line": 4,
+                "column": 22
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 11,
+                "column": 2
+              },
+              "end": {
+                "line": 11,
+                "column": 12
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 27,
+                "column": 19
+              },
+              "end": {
+                "line": 27,
+                "column": 29
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 33,
+                "column": 19
+              },
+              "end": {
+                "line": 33,
+                "column": 29
+              }
+            }
+          }
+        ],
+        "Ключ 0_1": [
+          {
+            "key": "Ключ 0_1",
+            "context": null,
+            "location": {
+              "start": {
+                "line": 16,
+                "column": 21
+              },
+              "end": {
+                "line": 16,
+                "column": 31
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": null,
+            "location": {
+              "start": {
+                "line": 25,
+                "column": 19
+              },
+              "end": {
+                "line": 25,
+                "column": 29
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": null,
+            "location": {
+              "start": {
+                "line": 29,
+                "column": 19
+              },
+              "end": {
+                "line": 29,
+                "column": 29
+              }
+            }
+          }
+        ]
+      });
+    });
+
+    it('from Lua', function() {
+      var template = fs.readFileSync(
+        'test/data/lua/0.lua', 'utf8'
+      );
+      var keyItems = {};
+
+      var keyItemsRet =
+        harvester.collectKeyItemsFromLua({
+          keyItems: keyItems,
+          input: template
+        });
+
+      // console.log(testUtils.stringifyObject(keyItems));
+
+      expect(keyItemsRet).to.equal(keyItems);
+
+      expect(testUtils.normalizeJson(keyItems)).to.deep.equal({
+        "Ключ 0_1\u0004Контекст 0_1": [
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 5,
+                "column": 2
+              },
+              "end": {
+                "line": 5,
+                "column": 25
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 12,
+                "column": 2
+              },
+              "end": {
+                "line": 12,
+                "column": 12
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 28,
+                "column": 19
+              },
+              "end": {
+                "line": 28,
+                "column": 31
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 34,
+                "column": 19
+              },
+              "end": {
+                "line": 34,
+                "column": 31
+              }
+            }
+          }
+        ],
+        "Ключ 0_1": [
+          {
+            "key": "Ключ 0_1",
+            "context": null,
+            "location": {
+              "start": {
+                "line": 17,
+                "column": 17
+              },
+              "end": {
+                "line": 17,
+                "column": 27
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": null,
+            "location": {
+              "start": {
+                "line": 26,
+                "column": 19
+              },
+              "end": {
+                "line": 26,
+                "column": 29
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": null,
+            "location": {
+              "start": {
+                "line": 30,
+                "column": 19
+              },
+              "end": {
+                "line": 30,
+                "column": 29
+              }
+            }
+          }
+        ]
+      });
+    });
+
     it('from Handlebars template', function() {
       var template = fs.readFileSync(
         'test/data/templates/handlebars/0.handlebars', 'utf8'
@@ -228,131 +472,11 @@ describe('harvester', function() {
       });
     });
 
-    it('from JS', function() {
-      var template = fs.readFileSync(
-        'test/data/js/0.js', 'utf8'
-      );
-      var keyItems = {};
-
-      var keyItemsRet =
-        harvester.collectKeyItemsFromJs({
-          keyItems: keyItems,
-          input: template
-        });
-
-      // console.log(testUtils.stringifyObject(keyItems));
-
-      expect(keyItemsRet).to.equal(keyItems);
-
-      expect(testUtils.normalizeJson(keyItems)).to.deep.equal({
-        "Ключ 0_1\u0004Контекст 0_1": [ {
-            "key": "Ключ 0_1",
-            "context": "Контекст 0_1",
-            "location": {
-              "start": {
-                "line": 4,
-                "column": 2
-              },
-              "end": {
-                "line": 4,
-                "column": 12
-              }
-            }
-          },
-          {
-            "key": "Ключ 0_1",
-            "context": "Контекст 0_1",
-            "location": {
-              "start": {
-                "line": 11,
-                "column": 2
-              },
-              "end": {
-                "line": 11,
-                "column": 12
-              }
-            }
-          },
-          {
-            "key": "Ключ 0_1",
-            "context": "Контекст 0_1",
-            "location": {
-              "start": {
-                "line": 27,
-                "column": 19
-              },
-              "end": {
-                "line": 27,
-                "column": 29
-              }
-            }
-          },
-          {
-            "key": "Ключ 0_1",
-            "context": "Контекст 0_1",
-            "location": {
-              "start": {
-                "line": 33,
-                "column": 19
-              },
-              "end": {
-                "line": 33,
-                "column": 29
-              }
-            }
-          }
-        ],
-        "Ключ 0_1": [ {
-            "key": "Ключ 0_1",
-            "context": null,
-            "location": {
-              "start": {
-                "line": 16,
-                "column": 21
-              },
-              "end": {
-                "line": 16,
-                "column": 31
-              }
-            }
-          },
-          {
-            "key": "Ключ 0_1",
-            "context": null,
-            "location": {
-              "start": {
-                "line": 25,
-                "column": 19
-              },
-              "end": {
-                "line": 25,
-                "column": 29
-              }
-            }
-          },
-          {
-            "key": "Ключ 0_1",
-            "context": null,
-            "location": {
-              "start": {
-                "line": 29,
-                "column": 19
-              },
-              "end": {
-                "line": 29,
-                "column": 29
-              }
-            }
-          }
-        ]
-      });
-    });
-
     it('from files', function() {
       var keyItems = harvester.collectKeyItemsFromFiles({
         keyItems: null,
         cwd: 'test/data',
-        pattern: '**/0.+(js|handlebars)',
+        pattern: '**/0.+(js|lua|handlebars)',
         excludes: null
       });
 
@@ -370,6 +494,15 @@ describe('harvester', function() {
         'js/0.js',
         'js/0.js',
         'js/0.js',
+
+        'lua/0.lua',
+        'lua/0.lua',
+        'lua/0.lua',
+        'lua/0.lua',
+        'lua/0.lua',
+        'lua/0.lua',
+        'lua/0.lua',
+
         'templates/handlebars/0.handlebars',
         'templates/handlebars/0.handlebars',
         'templates/handlebars/0.handlebars',
@@ -383,7 +516,7 @@ describe('harvester', function() {
       var keyItems = harvester.collectKeyItemsFromFiles({
         keyItems: null,
         cwd: 'test/data',
-        pattern: '**/0.+(js|handlebars)',
+        pattern: '**/0.+(js|lua|handlebars)',
         excludes: null
       });
 
