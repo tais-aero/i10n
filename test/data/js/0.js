@@ -1,7 +1,7 @@
 var tr = translator = require('i18n/translator');
 
 var m_1 = translator.message(
-  'Ключ 0_1',
+  'Ключ' + ' ' + '0_1',
   'Контекст' + ' ' +
   '0_1', {
   count: 0

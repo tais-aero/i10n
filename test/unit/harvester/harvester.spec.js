@@ -30,12 +30,264 @@ var JS_WRAP_OPTIONS = {
   message: 'msg'
 };
 
+var LUA_WRAP_OPTIONS = {
+  checkSpaces: true,
+  translatorRequireTemplate: "{translator} = require('{translatorRequire}').translator",
+  translatorRequire: 'L10n',
+  translator: 'tr',
+  message: 'msg'
+};
+
 var HANDLEBARS_WRAP_OPTIONS = {
   message: 'MSG'
 };
 
 describe('harvester', function() {
   describe('collect keys', function() {
+    it('from JS', function() {
+      var template = fs.readFileSync(
+        'test/data/js/0.js', 'utf8'
+      );
+      var keyItems = {};
+
+      var keyItemsRet =
+        harvester.collectKeyItemsFromJs({
+          keyItems: keyItems,
+          input: template
+        });
+
+      // console.log(testUtils.stringifyObject(keyItems));
+
+      expect(keyItemsRet).to.equal(keyItems);
+
+      expect(testUtils.normalizeJson(keyItems)).to.deep.equal({
+        "Ключ 0_1\u0004Контекст 0_1": [
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 4,
+                "column": 2
+              },
+              "end": {
+                "line": 4,
+                "column": 22
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 11,
+                "column": 2
+              },
+              "end": {
+                "line": 11,
+                "column": 12
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 27,
+                "column": 19
+              },
+              "end": {
+                "line": 27,
+                "column": 29
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 33,
+                "column": 19
+              },
+              "end": {
+                "line": 33,
+                "column": 29
+              }
+            }
+          }
+        ],
+        "Ключ 0_1": [
+          {
+            "key": "Ключ 0_1",
+            "context": null,
+            "location": {
+              "start": {
+                "line": 16,
+                "column": 21
+              },
+              "end": {
+                "line": 16,
+                "column": 31
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": null,
+            "location": {
+              "start": {
+                "line": 25,
+                "column": 19
+              },
+              "end": {
+                "line": 25,
+                "column": 29
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": null,
+            "location": {
+              "start": {
+                "line": 29,
+                "column": 19
+              },
+              "end": {
+                "line": 29,
+                "column": 29
+              }
+            }
+          }
+        ]
+      });
+    });
+
+    it('from Lua', function() {
+      var template = fs.readFileSync(
+        'test/data/lua/0.lua', 'utf8'
+      );
+      var keyItems = {};
+
+      var keyItemsRet =
+        harvester.collectKeyItemsFromLua({
+          keyItems: keyItems,
+          input: template
+        });
+
+      // console.log(testUtils.stringifyObject(keyItems));
+
+      expect(keyItemsRet).to.equal(keyItems);
+
+      expect(testUtils.normalizeJson(keyItems)).to.deep.equal({
+        "Ключ 0_1\u0004Контекст 0_1": [
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 5,
+                "column": 2
+              },
+              "end": {
+                "line": 5,
+                "column": 25
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 12,
+                "column": 2
+              },
+              "end": {
+                "line": 12,
+                "column": 12
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 28,
+                "column": 19
+              },
+              "end": {
+                "line": 28,
+                "column": 31
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": "Контекст 0_1",
+            "location": {
+              "start": {
+                "line": 34,
+                "column": 19
+              },
+              "end": {
+                "line": 34,
+                "column": 31
+              }
+            }
+          }
+        ],
+        "Ключ 0_1": [
+          {
+            "key": "Ключ 0_1",
+            "context": null,
+            "location": {
+              "start": {
+                "line": 17,
+                "column": 17
+              },
+              "end": {
+                "line": 17,
+                "column": 27
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": null,
+            "location": {
+              "start": {
+                "line": 26,
+                "column": 19
+              },
+              "end": {
+                "line": 26,
+                "column": 29
+              }
+            }
+          },
+          {
+            "key": "Ключ 0_1",
+            "context": null,
+            "location": {
+              "start": {
+                "line": 30,
+                "column": 19
+              },
+              "end": {
+                "line": 30,
+                "column": 29
+              }
+            }
+          }
+        ]
+      });
+    });
+
     it('from Handlebars template', function() {
       var template = fs.readFileSync(
         'test/data/templates/handlebars/0.handlebars', 'utf8'
@@ -220,131 +472,11 @@ describe('harvester', function() {
       });
     });
 
-    it('from JS', function() {
-      var template = fs.readFileSync(
-        'test/data/js/0.js', 'utf8'
-      );
-      var keyItems = {};
-
-      var keyItemsRet =
-        harvester.collectKeyItemsFromJs({
-          keyItems: keyItems,
-          input: template
-        });
-
-      // console.log(testUtils.stringifyObject(keyItems));
-
-      expect(keyItemsRet).to.equal(keyItems);
-
-      expect(testUtils.normalizeJson(keyItems)).to.deep.equal({
-        "Ключ 0_1\u0004Контекст 0_1": [ {
-            "key": "Ключ 0_1",
-            "context": "Контекст 0_1",
-            "location": {
-              "start": {
-                "line": 4,
-                "column": 2
-              },
-              "end": {
-                "line": 4,
-                "column": 12
-              }
-            }
-          },
-          {
-            "key": "Ключ 0_1",
-            "context": "Контекст 0_1",
-            "location": {
-              "start": {
-                "line": 11,
-                "column": 2
-              },
-              "end": {
-                "line": 11,
-                "column": 12
-              }
-            }
-          },
-          {
-            "key": "Ключ 0_1",
-            "context": "Контекст 0_1",
-            "location": {
-              "start": {
-                "line": 27,
-                "column": 19
-              },
-              "end": {
-                "line": 27,
-                "column": 29
-              }
-            }
-          },
-          {
-            "key": "Ключ 0_1",
-            "context": "Контекст 0_1",
-            "location": {
-              "start": {
-                "line": 33,
-                "column": 19
-              },
-              "end": {
-                "line": 33,
-                "column": 29
-              }
-            }
-          }
-        ],
-        "Ключ 0_1": [ {
-            "key": "Ключ 0_1",
-            "context": null,
-            "location": {
-              "start": {
-                "line": 16,
-                "column": 21
-              },
-              "end": {
-                "line": 16,
-                "column": 31
-              }
-            }
-          },
-          {
-            "key": "Ключ 0_1",
-            "context": null,
-            "location": {
-              "start": {
-                "line": 25,
-                "column": 19
-              },
-              "end": {
-                "line": 25,
-                "column": 29
-              }
-            }
-          },
-          {
-            "key": "Ключ 0_1",
-            "context": null,
-            "location": {
-              "start": {
-                "line": 29,
-                "column": 19
-              },
-              "end": {
-                "line": 29,
-                "column": 29
-              }
-            }
-          }
-        ]
-      });
-    });
-
     it('from files', function() {
       var keyItems = harvester.collectKeyItemsFromFiles({
         keyItems: null,
         cwd: 'test/data',
-        pattern: '**/0.+(js|handlebars)',
+        pattern: '**/0.+(js|lua|handlebars)',
         excludes: null
       });
 
@@ -362,6 +494,15 @@ describe('harvester', function() {
         'js/0.js',
         'js/0.js',
         'js/0.js',
+
+        'lua/0.lua',
+        'lua/0.lua',
+        'lua/0.lua',
+        'lua/0.lua',
+        'lua/0.lua',
+        'lua/0.lua',
+        'lua/0.lua',
+
         'templates/handlebars/0.handlebars',
         'templates/handlebars/0.handlebars',
         'templates/handlebars/0.handlebars',
@@ -375,7 +516,7 @@ describe('harvester', function() {
       var keyItems = harvester.collectKeyItemsFromFiles({
         keyItems: null,
         cwd: 'test/data',
-        pattern: '**/0.+(js|handlebars)',
+        pattern: '**/0.+(js|lua|handlebars)',
         excludes: null
       });
 
@@ -415,6 +556,28 @@ describe('harvester', function() {
       });
     });
 
+    describe('Lua', function() {
+      it('clean (without tr)', function() {
+        test_wrapTranslationTextsInLua('test/data/wrap-translation/lua/clean');
+      });
+
+      it('dirty (with tr and spaces)', function() {
+        test_wrapTranslationTextsInLua('test/data/wrap-translation/lua/dirty');
+      });
+
+      it('empty (no wrap)', function() {
+        test_wrapTranslationTextsInLua('test/data/wrap-translation/lua/empty');
+      });
+
+      it('test', function() {
+        var wrapOptions = defaultsDeep({
+          checkSpaces: false
+        }, LUA_WRAP_OPTIONS);
+
+        test_wrapTranslationTextsInLua('test/data/wrap-translation/lua/test', true, wrapOptions);
+      });
+    });
+
     describe('Handlebars template', function() {
       it('clean (HTML only)', function(done) {
         test_wrapTranslationTextsInHandlebars('test/data/wrap-translation/templates/handlebars/clean', done);
@@ -437,7 +600,8 @@ describe('harvester', function() {
       var dir = 'wrap-translation';
       var srcDir = path.resolve('test/data', dir);
       var targetDir = path.resolve('test/tmp', dir);
-      var pattern = '**/!(test|test_wrapped).+(js|handlebars)';
+      var pattern = '**/!(test|test_wrapped).+(js|lua|handlebars)';
+      var expectedFileCount = 18;
 
       fs.removeSync(targetDir);
       fs.copySync(srcDir, targetDir);
@@ -447,18 +611,19 @@ describe('harvester', function() {
         pattern: pattern,
         excludes: null,
         byTypeWrapOptions: {
-          handlebars: HANDLEBARS_WRAP_OPTIONS,
-          js: JS_WRAP_OPTIONS
+          js: JS_WRAP_OPTIONS,
+          lua: LUA_WRAP_OPTIONS,
+          handlebars: HANDLEBARS_WRAP_OPTIONS
         },
         resultCallback: function(err, result) {
           expect(err).to.be.null;
-          expect(result.files).to.have.lengthOf(12);
+          expect(result.files).to.have.lengthOf(expectedFileCount);
           expect(result.stat.counts.wrappedTexts).to.be.at.least(1);
 
           var wrappedTextsCount = 0;
 
           result.files.forEach(function(file) {
-            expect(file.name).to.match(/\.(js|handlebars)$/);
+            expect(file.name).to.match(/\.(js|lua|handlebars)$/);
             wrappedTextsCount += file.stat.counts.wrappedTexts;
           });
 
@@ -530,7 +695,26 @@ function test_wrapTranslationTextsInJs(file, dump, wrapOptions) {
   assert_wrapTranslationTextsInJs(result.wrapped, result, expextedJs);
 }
 
-//
+function test_wrapTranslationTextsInLua(file, dump, wrapOptions) {
+  wrapOptions = wrapOptions || LUA_WRAP_OPTIONS;
+
+  var lua = fs.readFileSync(
+    file + '.lua', 'utf8'
+  );
+
+  var expextedLua = fs.readFileSync(
+    file + '_wrapped.lua', 'utf8'
+  );
+
+  var result = harvester.wrapTranslationTextsInLua(lua, wrapOptions);
+  dump && fs.outputFileSync('test/tmp/' + file + '_wrapped.lua', result.wrapped);
+  assert_wrapTranslationTextsInLua(lua, result, expextedLua);
+
+  result = harvester.wrapTranslationTextsInLua(result.wrapped, wrapOptions);
+  dump && fs.outputFileSync('test/tmp/' + file + '_wrapped_2.lua', result.wrapped);
+  assert_wrapTranslationTextsInLua(result.wrapped, result, expextedLua);
+}
+
 function test_wrapTranslationTextsInHandlebars(file, done, dump, wrapOptions) {
   wrapOptions = wrapOptions || HANDLEBARS_WRAP_OPTIONS;
 
@@ -570,6 +754,10 @@ function assert_wrapTranslationTexts(mathRegexp, input, result, expected) {
 }
 
 function assert_wrapTranslationTextsInJs(input, result, expected) {
+  assert_wrapTranslationTexts(/[^a-z]tr\./g, input, result, expected);
+}
+
+function assert_wrapTranslationTextsInLua(input, result, expected) {
   assert_wrapTranslationTexts(/[^a-z]tr\./g, input, result, expected);
 }
 

@@ -2,7 +2,12 @@
 
 var fs = require('fs');
 
+var nodeModulesDir = 'node_modules';
 var rootDirs = [ 'src', 'test' ];
+
+if (!fs.existsSync(nodeModulesDir)) {
+    fs.mkdirSync(nodeModulesDir);
+}
 
 var createSymlink = function(path, dst_path, type) {
   fs.exists(dst_path, function(exists) {
@@ -13,5 +18,5 @@ var createSymlink = function(path, dst_path, type) {
 };
 
 rootDirs.forEach(function(dir) {
-  createSymlink('../' + dir, 'node_modules/' + dir, 'dir');
+  createSymlink('../' + dir, nodeModulesDir + '/' + dir, 'dir');
 });
