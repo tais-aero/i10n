@@ -554,6 +554,24 @@ describe('harvester', function() {
 
         test_wrapTranslationTextsInJs('test/data/wrap-translation/js/test', true, wrapOptions);
       });
+
+      it('test EN', function() {
+        harvester.setConfig({
+          js: {
+            wrap: {
+              wrapTargetRegExp: /[a-z]/i
+            }
+          }
+        });
+
+        var wrapOptions = defaultsDeep({
+          checkSpaces: false
+        }, JS_WRAP_OPTIONS);
+
+        test_wrapTranslationTextsInJs('test/data/wrap-translation/js/test_en', true, wrapOptions);
+
+        harvester.setConfig();
+      });
     });
 
     describe('Lua', function() {
@@ -600,7 +618,7 @@ describe('harvester', function() {
       var dir = 'wrap-translation';
       var srcDir = path.resolve('test/data', dir);
       var targetDir = path.resolve('test/tmp', dir);
-      var pattern = '**/!(test|test_wrapped).+(js|lua|handlebars)';
+      var pattern = '**/!(test|test_wrapped|test_en|test_en_wrapped).+(js|lua|handlebars)';
       var expectedFileCount = 18;
 
       fs.removeSync(targetDir);

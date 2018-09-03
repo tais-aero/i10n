@@ -1,5 +1,6 @@
 'use strict';
 
+var isString = require('lodash/lang/isString');
 var merge = require('lodash/object/merge');
 var get = require('lodash/object/get');
 var set = require('lodash/object/set');
@@ -462,6 +463,12 @@ Harvester.prototype = {
     var input = this._readFile(filePath);
     var result = this.wrapTranslationTextsInJs(input, options);
 
+    if (result.parseError) {
+      console.error('Parse JS file error...');
+      console.error('Path:', filePath);
+      console.error('Error:', result.parseError);
+    }
+
     if (result.stat.counts.wrappedTexts) {
       this._writeFile(filePath, result.wrapped);
     }
@@ -513,7 +520,14 @@ Harvester.prototype = {
     var offsetInc = wrapBefore.length + wrapAfter.length;
     var translatorIsDeclared = false;
     var isWrapped = false;
-    var ast = me._parseJs(input);
+    var parseError = null;
+    var ast = null;
+
+    try {
+      ast = me._parseJs(input);
+    } catch (e) {
+      parseError = e;
+    }
 
     var stat = {
       counts: {
@@ -574,7 +588,8 @@ Harvester.prototype = {
 
         if (node.type === 'CallExpression' &&
             get(node, 'callee.type') === 'Identifier' &&
-            get(node, 'callee.name') === 'require' &&
+            // TODO: FIXME:
+            // get(node, 'callee.name') === 'require' &&
             get(node, 'arguments[0].value') === options.translatorRequire) {
           translatorIsDeclared = true;
         }
@@ -582,6 +597,7 @@ Harvester.prototype = {
 
       skipProperty: function(property, node) {
         return includes(JS_WRAP_EXCLUDE_PROPERTIES, property) ||
+          get(node, 'arguments[0].value') === options.translatorRequire ||
           me._isJsMessage(node);
       }
     });
@@ -611,7 +627,8 @@ Harvester.prototype = {
 
     return {
       wrapped: input,
-      stat: stat
+      stat: stat,
+      parseError: parseError
     };
   },
 
@@ -979,6 +996,7 @@ Harvester.prototype = {
     var config = this._config;
 
     return !node.regex &&
+      isString(node.value) &&
       includes(config.js.wrap.nodeTypes, node.type) &&
       config.js.wrap.wrapTargetRegExp.test(node.value);
   },
