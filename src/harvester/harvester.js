@@ -43,15 +43,9 @@ var DEFAULT_ENCODING = 'utf-8';
 
 var RU_TEXT_REGEXP = /[№а-я]/i;
 
-var JS_WRAP_EXCLUDE_PROPERTIES = [ 'key' ];
-
-// TODO:
-var LUA_WRAP_EXCLUDE_PROPERTIES = [];
-
 var HANDLEBARS_REGEXP = /{{!--[\s\S]+?--}}|{{[\s\S]+?}}/g;
 var HANDLEBARS_MASK_CHAR = '\u2060'; // WORD JOINER
 var HANDLEBARS_UNMASK_REGEXP = /[^\u2060]+/g;
-var HANDLEBARS_WRAP_EXCLUDE_PROPERTIES = [ 'path' ];
 
 /**
  * Default config
@@ -62,23 +56,6 @@ var HANDLEBARS_WRAP_EXCLUDE_PROPERTIES = [ 'path' ];
 var DEFAULT_CONFIG = {
   POT_FILE_NAME: 'messages.pot',
   PO_FILE_EXT: 'po',
-
-  handlebars: {
-    nodeTypes: [ 'MustacheStatement', 'SubExpression' ],
-    nodePaths: [ 'MSG' ],
-    messageKey: {
-      index: 0,
-      types: [ 'StringLiteral' ]
-    },
-    messageContext: {
-      index: 1,
-      types: [ 'StringLiteral' ]
-    },
-    wrap: {
-      nodeTypes: [ 'StringLiteral' ],
-      wrapTargetRegExp: RU_TEXT_REGEXP
-    }
-  },
 
   js: {
     nodeTypes: [ 'CallExpression' ],
@@ -94,7 +71,13 @@ var DEFAULT_CONFIG = {
     },
     wrap: {
       nodeTypes: [ 'Literal' ],
-      wrapTargetRegExp: RU_TEXT_REGEXP
+      wrapTargetRegExp: RU_TEXT_REGEXP,
+      excludes: {
+        properties: [ 'key', 'property', 'test' ],
+        nodeTypes: [ 'LogicalExpression' ],
+        operators: [ '==', '===', '!=', '!==' ],
+        callees: [ 'require' ]
+      }
     }
   },
 
@@ -112,7 +95,34 @@ var DEFAULT_CONFIG = {
     },
     wrap: {
       nodeTypes: [ 'StringLiteral' ],
-      wrapTargetRegExp: RU_TEXT_REGEXP
+      wrapTargetRegExp: RU_TEXT_REGEXP,
+      excludes: {
+        properties: [ 'key', 'index', 'condition' ],
+        nodeTypes: [ 'LogicalExpression' ],
+        operators: [ '==', '~=' ],
+        callees: [ 'require', 'dofile', 'pcall' ]
+      }
+    }
+  },
+
+  handlebars: {
+    nodeTypes: [ 'MustacheStatement', 'SubExpression' ],
+    nodePaths: [ 'MSG' ],
+    messageKey: {
+      index: 0,
+      types: [ 'StringLiteral' ]
+    },
+    messageContext: {
+      index: 1,
+      types: [ 'StringLiteral' ]
+    },
+    wrap: {
+      nodeTypes: [ 'StringLiteral' ],
+      wrapTargetRegExp: RU_TEXT_REGEXP,
+      excludes: {
+        properties: [ 'path' ],
+        nodeTypes: [ ]
+      }
     }
   }
 };
@@ -463,11 +473,7 @@ Harvester.prototype = {
     var input = this._readFile(filePath);
     var result = this.wrapTranslationTextsInJs(input, options);
 
-    if (result.parseError) {
-      console.error('Parse JS file error...');
-      console.error('Path:', filePath);
-      console.error('Error:', result.parseError);
-    }
+    this._printParseFileResult(result, filePath, 'Parse JS file error...');
 
     if (result.stat.counts.wrappedTexts) {
       this._writeFile(filePath, result.wrapped);
@@ -482,6 +488,8 @@ Harvester.prototype = {
   wrapTranslationTextsInLuaFile: function(filePath, options, resultCallback) {
     var input = this._readFile(filePath);
     var result = this.wrapTranslationTextsInLua(input, options);
+
+    this._printParseFileResult(result, filePath, 'Parse Lua file error...');
 
     if (result.stat.counts.wrappedTexts) {
       this._writeFile(filePath, result.wrapped);
@@ -513,6 +521,7 @@ Harvester.prototype = {
   // TODO: deduplicate code, see: wrapTranslationTextsInLua
   wrapTranslationTextsInJs: function(input, options) {
     var me = this;
+    var wrapConfig = me._config.js.wrap;
     var wrapBefore = options.translator + '.' + options.message + '(';
     var wrapAfter = ')';
     var concat = ' + ';
@@ -537,7 +546,9 @@ Harvester.prototype = {
 
     astTraverse(ast, {
       pre: function(node) {
-        if (me._isNeedWrapJs(node)) {
+        var skip = options.skipNode ? options.skipNode(node) : false;
+
+        if (!skip && me._isNeedWrapJs(node)) {
           var start = node.start + offset;
           var end = node.end + offset;
 
@@ -589,16 +600,29 @@ Harvester.prototype = {
         if (node.type === 'CallExpression' &&
             get(node, 'callee.type') === 'Identifier' &&
             // TODO: FIXME:
-            // get(node, 'callee.name') === 'require' &&
             get(node, 'arguments[0].value') === options.translatorRequire) {
           translatorIsDeclared = true;
         }
       },
 
       skipProperty: function(property, node) {
-        return includes(JS_WRAP_EXCLUDE_PROPERTIES, property) ||
-          get(node, 'arguments[0].value') === options.translatorRequire ||
+        var skip =
+          options.skipProperty ? options.skipProperty(property, node) : false;
+
+        skip = skip || (property === 'arguments' && (
+            includes(wrapConfig.excludes.callees, get(node, 'callee.name')) ||
+            includes(
+              wrapConfig.excludes.callees, get(node, 'callee.property.name')
+            )
+        ));
+
+        skip = skip ||
+          includes(wrapConfig.excludes.properties, property) ||
+          includes(wrapConfig.excludes.nodeTypes, node.type) ||
+          includes(wrapConfig.excludes.operators, node.operator) ||
           me._isJsMessage(node);
+
+        return skip;
       }
     });
 
@@ -638,6 +662,7 @@ Harvester.prototype = {
   // TODO: deduplicate code, see: wrapTranslationTextsInJs
   wrapTranslationTextsInLua: function(input, options) {
     var me = this;
+    var wrapConfig = me._config.lua.wrap;
     var wrapBefore = options.translator + '.' + options.message + '(';
     var wrapAfter = ')';
     var concat = ' + ';
@@ -645,7 +670,14 @@ Harvester.prototype = {
     var offsetInc = wrapBefore.length + wrapAfter.length;
     var translatorIsDeclared = false;
     var isWrapped = false;
-    var ast = me._parseLua(input);
+    var parseError = null;
+    var ast = null;
+
+    try {
+      ast = me._parseLua(input);
+    } catch (e) {
+      parseError = e;
+    }
 
     var stat = {
       counts: {
@@ -655,7 +687,9 @@ Harvester.prototype = {
 
     astTraverse(ast, {
       pre: function(node) {
-        if (me._isNeedWrapLua(node)) {
+        var skip = options.skipNode ? options.skipNode(node) : false;
+
+        if (!skip && me._isNeedWrapLua(node)) {
           var start = node.range[0] + offset;
           var end = node.range[1] + offset;
 
@@ -706,15 +740,34 @@ Harvester.prototype = {
 
         if (node.type === 'CallExpression' &&
             get(node, 'base.type') === 'Identifier' &&
-            get(node, 'base.name') === 'require' &&
+            // TODO: FIXME:
             get(node, 'arguments[0].value') === options.translatorRequire) {
           translatorIsDeclared = true;
         }
       },
 
       skipProperty: function(property, node) {
-        return includes(LUA_WRAP_EXCLUDE_PROPERTIES, property) ||
+        var skip =
+          options.skipProperty ? options.skipProperty(property, node) : false;
+
+        skip = skip || ((
+              property === 'arguments' || property === 'argument'
+            ) && (
+            includes(
+              wrapConfig.excludes.callees, get(node, 'base.identifier.name')
+            ) ||
+            includes(
+              wrapConfig.excludes.callees, get(node, 'base.name')
+            )
+        ));
+
+        skip = skip ||
+          includes(wrapConfig.excludes.properties, property) ||
+          includes(wrapConfig.excludes.nodeTypes, node.type) ||
+          includes(wrapConfig.excludes.operators, node.operator) ||
           me._isLuaMessage(node);
+
+        return skip;
       }
     });
 
@@ -743,7 +796,8 @@ Harvester.prototype = {
 
     return {
       wrapped: input,
-      stat: stat
+      stat: stat,
+      parseError: parseError
     };
   },
 
@@ -752,6 +806,7 @@ Harvester.prototype = {
    */
   wrapTranslationTextsInHandlebars: function(input, options, resultCallback) {
     var me = this;
+    var wrapConfig = me._config.handlebars.wrap;
     var htmlInfo;
 
     var stat = {
@@ -814,7 +869,9 @@ Harvester.prototype = {
         },
 
         skipProperty: function(property, node) {
-          return includes(HANDLEBARS_WRAP_EXCLUDE_PROPERTIES, property) ||
+          var skip = options.skip ? options.skip(property, node) : false;
+          return skip ||
+            includes(wrapConfig.excludes.properties, property) ||
             me._isHandlebarsMessageHelper(node);
         }
       });
@@ -1218,6 +1275,14 @@ Harvester.prototype = {
       locations: true,
       ranges: true
     });
+  },
+
+  _printParseFileResult: function(result, filePath, errorMessage) {
+    if (result.parseError) {
+      console.log(errorMessage || 'Parse file error...');
+      console.log('Path:', filePath);
+      console.log('Error:', result.parseError);
+    }
   },
 
   _generateJs: function(ast) {

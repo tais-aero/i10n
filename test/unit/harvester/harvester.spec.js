@@ -10,10 +10,14 @@ var fs = require('fs-extra');
 var path = require('path');
 var glob = require('glob');
 
-var map = require('lodash/collection/map');
 var flatten = require('lodash/array/flatten');
-var endsWith = require('lodash/string/endsWith');
+var map = require('lodash/collection/map');
+var each = require('lodash/collection/each');
+var includes = require('lodash/collection/includes');
 var defaultsDeep = require('lodash/object/defaultsDeep');
+var get = require('lodash/object/get');
+var trim = require('lodash/string/trim');
+var endsWith = require('lodash/string/endsWith');
 
 var testUtils = require('test/utils');
 var Handlebars = require('handlebars');
@@ -555,7 +559,7 @@ describe('harvester', function() {
         test_wrapTranslationTextsInJs('test/data/wrap-translation/js/test', true, wrapOptions);
       });
 
-      it('test EN', function() {
+      it('test EN & custom check', function() {
         harvester.setConfig({
           js: {
             wrap: {
@@ -565,7 +569,34 @@ describe('harvester', function() {
         });
 
         var wrapOptions = defaultsDeep({
-          checkSpaces: false
+          checkSpaces: false,
+          skipNode: function(node) {
+            if (node._skip) {
+              return true;
+            }
+            var value = trim(node.value || '');
+            return value.length < 3 || /^[.#?&]|http|mailto/.test(value);
+          },
+          skipProperty: function(property, node) {
+            if (node._skip) {
+              return true;
+            }
+
+            var excludedFuncs = ['$', 'find', 'append', 'on'];
+
+            if (property === 'arguments' && (
+                includes(excludedFuncs, get(node, 'callee.name')) ||
+                includes(excludedFuncs, get(node, 'callee.property.name'))
+            )) {
+              node.arguments.forEach(function(argument) {
+                if (!includes([
+                      'FunctionExpression', 'ObjectExpression'
+                    ], argument.type)) {
+                  argument._skip = true;
+                }
+              });
+            }
+          }
         }, JS_WRAP_OPTIONS);
 
         test_wrapTranslationTextsInJs('test/data/wrap-translation/js/test_en', true, wrapOptions);
@@ -594,6 +625,68 @@ describe('harvester', function() {
 
         test_wrapTranslationTextsInLua('test/data/wrap-translation/lua/test', true, wrapOptions);
       });
+
+      it('test EN & custom check', function() {
+        harvester.setConfig({
+          lua: {
+            wrap: {
+              wrapTargetRegExp: /[a-z]/i
+            }
+          }
+        });
+
+        var wrapOptions = defaultsDeep({
+          checkSpaces: false,
+          skipNode: function(node) {
+            if (node._skip) {
+              return true;
+            }
+            var value = trim(node.value || '');
+            return value.length < 3 || /^[.#?&]|http|mailto/.test(value);
+          },
+          skipProperty: function(property, node) {
+            if (node._skip) {
+              return true;
+            }
+
+            var skip = false;
+            var identifierRegexp = /sql/i;
+
+            if (identifierRegexp.test(get(node, 'key.name'))) {
+              return true;
+            }
+
+            each(node.variables, function(v) {
+              skip = identifierRegexp.test(v.name) ||
+                identifierRegexp.test(get(v, 'identifier.name'))
+              return !skip;
+            });
+
+            if (skip) {
+              return true;
+            }
+
+            var excludedFuncs = ['foo', 'error', 'gsub'];
+
+            if (property === 'arguments' && (
+                includes(excludedFuncs, get(node, 'base.identifier.name')) ||
+                includes(excludedFuncs, get(node, 'base.name'))
+            )) {
+              node.arguments.forEach(function(argument) {
+                if (!includes([
+                      'TableConstructorExpression'
+                    ], argument.type)) {
+                  argument._skip = true;
+                }
+              });
+            }
+          }
+        }, LUA_WRAP_OPTIONS);
+
+        test_wrapTranslationTextsInLua('test/data/wrap-translation/lua/test_en', true, wrapOptions);
+
+        harvester.setConfig();
+      });
     });
 
     describe('Handlebars template', function() {
@@ -618,7 +711,7 @@ describe('harvester', function() {
       var dir = 'wrap-translation';
       var srcDir = path.resolve('test/data', dir);
       var targetDir = path.resolve('test/tmp', dir);
-      var pattern = '**/!(test|test_wrapped|test_en|test_en_wrapped).+(js|lua|handlebars)';
+      var pattern = '**/!(test|test_*).+(js|lua|handlebars)';
       var expectedFileCount = 18;
 
       fs.removeSync(targetDir);
