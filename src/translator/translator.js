@@ -188,14 +188,7 @@ Translator.prototype = {
     pos.forEach(function(po) {
       var poData = poUtils.poToJson(po);
       var locale = poData.headers.Language;
-      var localeMessages = {};
-
-      poData.items.forEach(function(item) {
-        var messageKey = utils.buildMessageKey(item.msgid, item.msgctxt);
-        var message = item.msgstr.join('');
-
-        localeMessages[messageKey] = message;
-      });
+      var localeMessages = poUtils.poItemsToMessages(poData.items);
 
       messages[locale] = messages[locale] ?
         assign(messages[locale], localeMessages) :
