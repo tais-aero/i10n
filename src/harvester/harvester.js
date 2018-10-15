@@ -215,7 +215,15 @@ Harvester.prototype = {
         return;
       }
 
-      var content = me._readFileRelative(options.cwd, file);
+      var content;
+
+      try {
+        content = me._readFileRelative(options.cwd, file);
+      } catch (e) {
+        // TODO: best way for logging
+        console.log('Error:', e);
+        return;
+      }
 
       if (options.transformFile) {
         content = options.transformFile(content, file);
@@ -314,7 +322,15 @@ Harvester.prototype = {
 
     var me = this;
     var config = me._config.lua;
-    var ast = me._parseLua(options.input);
+    var ast;
+
+    try {
+      ast = me._parseLua(options.input);
+    } catch (e) {
+      // TODO: best way for logging
+      console.log('Error:', e);
+      return keyItems;
+    }
 
     astTraverse(ast, {
       pre: function(node) {
