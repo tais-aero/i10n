@@ -642,7 +642,8 @@ Harvester.prototype = {
       }
     });
 
-    if (isWrapped && !translatorIsDeclared) {
+    if (isWrapped && !translatorIsDeclared &&
+        options.translatorRequireTemplate) {
       var translatorDeclare = utils.formatTemplate(
         options.translatorRequireTemplate, null, {
           translator: options.translator,
@@ -787,7 +788,8 @@ Harvester.prototype = {
       }
     });
 
-    if (isWrapped && !translatorIsDeclared) {
+    if (isWrapped && !translatorIsDeclared &&
+        options.translatorRequireTemplate) {
       var translatorDeclare = utils.formatTemplate(
         options.translatorRequireTemplate, null, {
           translator: options.translator,
