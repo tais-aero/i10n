@@ -1,10 +1,15 @@
 'use strict';
 
 var isString = require('lodash/lang/isString');
+var cloneDeep = require('lodash/lang/cloneDeep');
 var merge = require('lodash/object/merge');
 var get = require('lodash/object/get');
 var set = require('lodash/object/set');
+var drop = require('lodash/array/drop');
+var each = require('lodash/collection/each');
+var reduce = require('lodash/collection/reduce');
 var includes = require('lodash/collection/includes');
+var filter = require('lodash/collection/filter');
 var sortBy = require('lodash/collection/sortBy');
 var repeat = require('lodash/string/repeat');
 
@@ -22,6 +27,9 @@ var path = require('path');
 var child_process = require('child_process');
 var execSync = child_process.execSync;
 var stream = require('stream');
+
+var readlineSync = require('readline-sync');
+var chalk = require('chalk');
 
 // -----------------------------------------------------------------------------
 
@@ -47,6 +55,8 @@ var HANDLEBARS_REGEXP = /{{!--[\s\S]+?--}}|{{[\s\S]+?}}/g;
 var HANDLEBARS_MASK_CHAR = '\u2060'; // WORD JOINER
 var HANDLEBARS_UNMASK_REGEXP = /[^\u2060]+/g;
 
+var DEFAULT_MESSAGE_CONTEXT = 'L10N_CONTEXT';
+
 /**
  * Default config
  * TODO: docs
@@ -56,6 +66,15 @@ var HANDLEBARS_UNMASK_REGEXP = /[^\u2060]+/g;
 var DEFAULT_CONFIG = {
   POT_FILE_NAME: 'messages.pot',
   PO_FILE_EXT: 'po',
+
+  // see textStyle function
+  colors: {
+    light: 'gray',
+    info: 'blue',
+    warning: 'red',
+    candidateToWrap: 'magenta.bgWhiteBright.bold',
+    wrapped: 'gray'
+  },
 
   js: {
     nodeTypes: [ 'CallExpression' ],
@@ -72,6 +91,7 @@ var DEFAULT_CONFIG = {
     wrap: {
       nodeTypes: [ 'Literal' ],
       wrapTargetRegExp: RU_TEXT_REGEXP,
+      concatOperator: ' + ',
       excludes: {
         properties: [ 'key', 'property', 'test' ],
         nodeTypes: [ 'LogicalExpression' ],
@@ -96,6 +116,7 @@ var DEFAULT_CONFIG = {
     wrap: {
       nodeTypes: [ 'StringLiteral' ],
       wrapTargetRegExp: RU_TEXT_REGEXP,
+      concatOperator: ' .. ',
       excludes: {
         properties: [ 'key', 'index', 'condition' ],
         nodeTypes: [ 'LogicalExpression' ],
@@ -126,6 +147,29 @@ var DEFAULT_CONFIG = {
     }
   }
 };
+
+var textStyle = function(style) {
+  return get(chalk, style);
+};
+
+/**
+ * AbortedByUserError class
+ */
+var AbortedByUserError = function() {
+  Error.call(this) ;
+
+  this.name = 'AbortedByUserError';
+  this.message = 'Aborted by user';
+
+  // No stack
+  // if (Error.captureStackTrace) {
+  //   Error.captureStackTrace(this, AbortedByUserError);
+  // } else {
+  //   this.stack = (new Error()).stack;
+  // }
+};
+
+AbortedByUserError.prototype = Object.create(Error.prototype);
 
 /**
  * Harvester class
@@ -408,6 +452,7 @@ Harvester.prototype = {
    */
   wrapTranslationTextsInFiles: function(options) {
     var me = this;
+    var colors = me._config.colors;
 
     var byFileTypes = {
       'js': me.wrapTranslationTextsInJsFile,
@@ -424,8 +469,8 @@ Harvester.prototype = {
       files: []
     };
 
-    var doResult = function(err) {
-      options.resultCallback(err || null, result);
+    var doResult = function(err, abort) {
+      options.resultCallback(err || null, result, abort);
     };
 
     var executeWrapTranslationTextsInFile = function(func, file, wrapOptions,
@@ -444,6 +489,21 @@ Harvester.prototype = {
       });
     };
 
+    var files = glob.sync(options.pattern, {
+      cwd: options.cwd,
+      ignore: options.excludes,
+      nodir: true
+    });
+
+    var fileCount = 0;
+
+    if (options.verbose) {
+      console.log(
+        textStyle(colors.info)('Files to process:'),
+        textStyle(colors.info)(files.length)
+      );
+    }
+
     var globber = new glob.Glob(options.pattern, {
       cwd: options.cwd,
       ignore: options.excludes,
@@ -452,8 +512,23 @@ Harvester.prototype = {
 
     globber
       .on('match', function(file) {
+        fileCount++;
+
         var type = path.extname(file).toLowerCase().replace('.', '');
         var byFileType = byFileTypes[type];
+
+        if (options.verbose) {
+          console.log(textStyle(colors.info)(utils.formatTemplate(
+            'Processing file: {current} of {all}', null, {
+              current: fileCount,
+              all: files.length
+            }
+          )));
+          console.log(
+            textStyle(colors.info)(file),
+            textStyle(colors.info)('...')
+          );
+        }
 
         if (!byFileType) {
           return;
@@ -461,16 +536,54 @@ Harvester.prototype = {
 
         var wrapOptions = options.byTypeWrapOptions[type];
 
+        if (options.verbose && wrapOptions.prompt) {
+          console.log('\n');
+          console.log(
+            'Interactive wrap:\n',
+            ' ' + textStyle(colors.candidateToWrap)('Message') +
+                  ' - candidate to wrap\n',
+            ' ' + textStyle(colors.wrapped)(utils.formatTemplate(
+                "{translator}.{message}('Message')", null, {
+                  translator: wrapOptions.translator,
+                  message: wrapOptions.message
+                }
+              )) + ' - wrapped\n',
+            '\n',
+            ' Keys:\n',
+            '   y - wrap\n',
+            '   n - no wrap\n',
+            '   c - wrap within context'
+          );
+          if (wrapOptions.controlMessages) {
+            console.log(
+              '    q - custom message'
+            );
+          }
+          console.log(
+            '    x - abort\n'
+          );
+        }
+
         globber.pause();
 
-        executeWrapTranslationTextsInFile(byFileType, file, wrapOptions,
-          function() {
-            globber.resume();
+        try {
+          executeWrapTranslationTextsInFile(byFileType, file, wrapOptions,
+            function() {
+              globber.resume();
+            }
+          );
+        } catch (e) {
+          if (e instanceof AbortedByUserError) {
+            globber.abort();
+            return;
           }
-        );
+          // TODO: best way for logging
+          console.log('Error:', e);
+          globber.resume();
+        }
       })
       .on('abort', function() {
-        doResult();
+        doResult(null, true);
       })
       .on('error', function() {
         doResult(true);
@@ -535,7 +648,669 @@ Harvester.prototype = {
    * TODO: docs
    */
   // TODO: deduplicate code, see: wrapTranslationTextsInLua
-  wrapTranslationTextsInJs: function(input, options) {
+  wrapTranslationTextsInJs: function(input, options, _inline) {
+    var me = this;
+    var wrapConfig = me._config.js.wrap;
+    var offset = 0;
+    var translatorIsDeclared = false;
+    var isWrapped = false;
+    var parseError = null;
+    var ast = null;
+    var _skip = false;
+
+    try {
+      ast = me._parseJs(input);
+    } catch (e) {
+      parseError = e;
+    }
+
+    var stat = {
+      counts: {
+        wrappedTexts: 0
+      }
+    };
+
+    astTraverse(ast, {
+      pre: function(node) {
+        var skip = options.skipNode ? options.skipNode(node) : false;
+
+        if (!skip && me._isNeedWrapJs(node)) {
+          var start = node.start + offset;
+          var end = node.end + offset;
+
+          var before = input.substr(0, start);
+          var after = input.substr(end);
+
+          var literal = node.raw;
+          var wrapped;
+
+          try {
+            wrapped = me._getWrapped(
+              literal, before, after, wrapConfig, options,
+              _inline, me.wrapTranslationTextsInJs
+            );
+          } catch (e) {
+            if (e instanceof AbortedByUserError) {
+              throw e;
+            }
+            console.log(e);
+            wrapped = {
+              text: literal,
+              offset: 0,
+              count: 0
+            };
+          }
+
+          input = before + wrapped.text + after;
+
+          offset += wrapped.offset;
+
+          if (wrapped.count) {
+            stat.counts.wrappedTexts += wrapped.count;
+            isWrapped = true;
+          }
+
+          _skip = wrapped._skip;
+        }
+
+        if (node.type === 'CallExpression' &&
+            get(node, 'callee.type') === 'Identifier' &&
+            // TODO: FIXME:
+            get(node, 'arguments[0].value') === options.translatorRequire) {
+          translatorIsDeclared = true;
+        }
+      },
+
+      skipProperty: function(property, node) {
+        var skip =
+          options.skipProperty ? options.skipProperty(property, node) : false;
+
+        skip = skip || (property === 'arguments' && (
+            includes(wrapConfig.excludes.callees, get(node, 'callee.name')) ||
+            includes(
+              wrapConfig.excludes.callees, get(node, 'callee.property.name')
+            )
+        ));
+
+        skip = skip ||
+          includes(wrapConfig.excludes.properties, property) ||
+          includes(wrapConfig.excludes.nodeTypes, node.type) ||
+          includes(wrapConfig.excludes.operators, node.operator) ||
+          me._isJsMessage(node);
+
+        return skip;
+      }
+    });
+
+    if (!_inline && isWrapped && !translatorIsDeclared &&
+        options.translatorRequireTemplate) {
+      var translatorDeclare = utils.formatTemplate(
+        options.translatorRequireTemplate, null, {
+          translator: options.translator,
+          translatorRequire: options.translatorRequire
+        }
+      );
+
+      var useStrict = 'use strict';
+      var useStrictIndex = input.indexOf(useStrict);
+
+      if (useStrictIndex > 0) {
+        var cutIndex = useStrictIndex + useStrict.length + 2;
+
+        input =
+          input.substr(0, cutIndex) +
+          '\n\n' + translatorDeclare +
+          input.substr(cutIndex);
+      } else {
+        input = translatorDeclare + '\n\n' + input;
+      }
+    }
+
+    return {
+      wrapped: input,
+      stat: stat,
+      parseError: parseError,
+      _skip: _skip
+    };
+  },
+
+  /**
+   * TODO: docs
+   */
+  // TODO: deduplicate code, see: wrapTranslationTextsInJs
+  wrapTranslationTextsInLua: function(input, options, _inline) {
+    var me = this;
+    var wrapConfig = me._config.lua.wrap;
+    var offset = 0;
+    var translatorIsDeclared = false;
+    var isWrapped = false;
+    var parseError = null;
+    var ast = null;
+    var _skip = false;
+
+    try {
+      ast = me._parseLua(input);
+    } catch (e) {
+      parseError = e;
+    }
+
+    var stat = {
+      counts: {
+        wrappedTexts: 0
+      }
+    };
+
+    astTraverse(ast, {
+      pre: function(node) {
+        var skip = options.skipNode ? options.skipNode(node) : false;
+
+        if (!skip && me._isNeedWrapLua(node)) {
+          var start = node.range[0] + offset;
+          var end = node.range[1] + offset;
+
+          var before = input.substr(0, start);
+          var after = input.substr(end);
+
+          var literal = node.raw;
+          var wrapped;
+
+          try {
+            wrapped = me._getWrapped(
+              literal, before, after, wrapConfig, options,
+              _inline, me.wrapTranslationTextsInLua
+            );
+          } catch (e) {
+            if (e instanceof AbortedByUserError) {
+              throw e;
+            }
+            console.log(e);
+            wrapped = {
+              text: literal,
+              offset: 0,
+              count: 0
+            };
+          }
+
+          input = before + wrapped.text + after;
+
+          offset += wrapped.offset;
+
+          if (wrapped.count) {
+            stat.counts.wrappedTexts += wrapped.count;
+            isWrapped = true;
+          }
+
+          _skip = wrapped._skip;
+        }
+
+        if (node.type === 'CallExpression' &&
+            get(node, 'base.type') === 'Identifier' &&
+            // TODO: FIXME:
+            get(node, 'arguments[0].value') === options.translatorRequire) {
+          translatorIsDeclared = true;
+        }
+      },
+
+      skipProperty: function(property, node) {
+        var skip =
+          options.skipProperty ? options.skipProperty(property, node) : false;
+
+        skip = skip || ((
+              property === 'arguments' || property === 'argument'
+            ) && (
+            includes(
+              wrapConfig.excludes.callees, get(node, 'base.identifier.name')
+            ) ||
+            includes(
+              wrapConfig.excludes.callees, get(node, 'base.name')
+            )
+        ));
+
+        skip = skip ||
+          includes(wrapConfig.excludes.properties, property) ||
+          includes(wrapConfig.excludes.nodeTypes, node.type) ||
+          includes(wrapConfig.excludes.operators, node.operator) ||
+          me._isLuaMessage(node);
+
+        return skip;
+      }
+    });
+
+    if (!_inline && isWrapped && !translatorIsDeclared &&
+        options.translatorRequireTemplate) {
+      var translatorDeclare = utils.formatTemplate(
+        options.translatorRequireTemplate, null, {
+          translator: options.translator,
+          translatorRequire: options.translatorRequire
+        }
+      );
+
+      input = translatorDeclare + '\n\n' + input;
+    }
+
+    return {
+      wrapped: input,
+      stat: stat,
+      parseError: parseError,
+      _skip: _skip
+    };
+  },
+
+  /**
+   * TODO: docs
+   */
+  prepareControlMessages: function(controlMessages, options) {
+    options = options || {};
+
+    var messages = sortBy(
+      reduce(
+        controlMessages,
+        function(result, originalValue, message) {
+          var include = options.filter ?
+            options.filter(message, originalValue) : true;
+
+          if (include) {
+            result.push({
+              message: message,
+              _originalValue: originalValue,
+              counts: {
+                candidate: 0,
+                wrapped: 0
+              }
+            });
+          }
+
+          return result;
+        },
+        []
+      ),
+      function(messageInfo) {
+        if (options.sorter) {
+          return options.sorter(
+            messageInfo.message, messageInfo._originalValue
+          );
+        }
+        return -messageInfo.message.length;
+      }
+    );
+
+    return messages;
+  },
+
+  _addCustomMessageToControlMessages: function(customMessageInfo,
+                                               controlMessages) {
+    controlMessages.push(customMessageInfo);
+    return sortBy(
+      controlMessages,
+      function(messageInfo) {
+        return -messageInfo.message.length;
+      }
+    );
+  },
+
+  _getWrapped: function(literal, before, after, wrapConfig, options,
+                        _inline, _wrappFunc) {
+    var me = this;
+    var colors = me._config.colors;
+    var wrapBefore = options.translator + '.' + options.message + '(';
+    var wrapAfter = ')';
+
+    var isWrap = options.controlMessages ? false : true;
+    var text = literal;
+    var count = 0;
+    var _skip = false;
+
+    var prompt, contextArg;
+
+    // TODO: checkSpaces
+
+    if (isWrap) {
+      prompt = me._promptWrap(
+        literal, '', '', [ before ], [ after ], null, options
+      );
+
+      if (prompt.wrap) {
+        contextArg =
+          prompt.context ? (", '" + prompt.context + "'") : '';
+
+        text = wrapBefore + literal + contextArg + wrapAfter;
+        count = 1;
+      }
+    } else {
+      var quotes = me._getQuotes(literal);
+
+      var inlineControlMessages = get(_inline, 'controlMessages');
+
+      var remainsControlMessages = get(_inline, 'remainsControlMessages') ||
+        filter(
+          options.controlMessages,
+          function(messageInfo) {
+            return literal.indexOf(messageInfo.message) !== -1;
+          }
+        );
+
+      var controlMessages = inlineControlMessages || remainsControlMessages;
+
+      if (controlMessages.length > 0) {
+        var messageInfo = controlMessages[0];
+        var custom = false;
+        var customMessageInfo = {
+          message: null,
+          counts: {
+            candidate: 0,
+            wrapped: 0
+          }
+        };
+
+        while (true) {
+          var message = messageInfo.message;
+          var inlineExpLeft = 'x=';
+
+          // WARN: don't use formatTemplate
+          var bound = '([^' + options.boundExcludeChar + '])';
+          var regexp = new RegExp(
+            bound + '(' + utils.escapeRegExp(message) + ')' + bound,
+            'g'
+          );
+
+          var dIndex = 1; // = [^{boundExcludeChar}] length
+          var reResult = null;
+
+          while ((reResult = regexp.exec(text))) {
+            var index = reResult.index;
+            var match = reResult[0];
+            var pl = reResult[1];
+            var p = reResult[2];
+            var pr = reResult[3];
+
+            messageInfo.counts.candidate++;
+
+            if (customMessageInfo.message) {
+              console.log(textStyle(colors.info)(
+                '\nTrying with your message...'
+              ));
+            }
+
+            prompt = me._promptWrap(
+              p,
+              text.substr(0, index + pl.length),
+              text.substr(index + p.length + pl.length),
+              _inline ?
+                [ _inline.before, before.substr(inlineExpLeft.length) ] :
+                [ before ],
+              _inline ?
+                [ after, _inline.after ] :
+                [ after ],
+              remainsControlMessages,
+              options
+            );
+
+            if (prompt.skip) {
+              _skip = true;
+              break;
+            } else {
+              _skip = false;
+            }
+
+            if (prompt.custom) {
+              custom = true;
+              break;
+            } else {
+              custom = false;
+            }
+
+            if (!prompt.wrap) {
+              regexp.lastIndex -= dIndex;
+              continue;
+            }
+
+            var concatLeft =
+              index > quotes.left.length - 1 ?
+                quotes.right + wrapConfig.concatOperator : '';
+
+            var left = concatLeft ?
+              (pl + concatLeft + wrapBefore + quotes.left) :
+              wrapBefore + quotes.left;
+
+            var concatRight =
+              index + p.length <
+              text.length - quotes.right.length - 1 ?
+                wrapConfig.concatOperator + quotes.left : '';
+
+            var right = concatRight ?
+              (quotes.right + wrapAfter + concatRight + pr) :
+              quotes.right + wrapAfter;
+
+            contextArg = prompt.context ?
+              (quotes.right + ', ' + quotes.left + prompt.context) :
+              '';
+
+            var replaced = left + p + contextArg + right;
+
+            text =
+              text.substr(
+                0, index - (concatLeft ? 0 : quotes.left.length - 1)
+              ) +
+              replaced +
+              text.substr(
+                (concatRight ? 0 : quotes.right.length - 1) +
+                  index + match.length
+              );
+
+            regexp.lastIndex = index + replaced.length - dIndex;
+
+            count++;
+            messageInfo.counts.wrapped++;
+
+            if (customMessageInfo.message) {
+              options.controlMessages = me._addCustomMessageToControlMessages(
+                cloneDeep(customMessageInfo), options.controlMessages
+              );
+            }
+          }
+
+          if (_skip) {
+            break;
+          }
+
+          if (custom) {
+            if (!reResult) {
+              console.log(
+                textStyle(colors.warning)(
+                  '\nYour message is not matched.'
+                ),
+                textStyle(colors.warning)(
+                  'Repeat with candidate of message...'
+                )
+              );
+
+              customMessageInfo.message = null;
+              messageInfo = controlMessages[0];
+              custom = false;
+            } else {
+              customMessageInfo.message = readlineSync.question(
+                textStyle(colors.info)('\nEnter your message...\n')
+              );
+
+              messageInfo = customMessageInfo;
+            }
+          } else {
+            break;
+          }
+        }
+
+        if (!_skip) {
+          if (customMessageInfo.message) {
+            console.log(textStyle(colors.info)(
+              '\n...end of trying with your message.'
+            ));
+          }
+
+          each(controlMessages, function(m, i) {
+            if (i === 0) {
+              return;
+            }
+
+            var inlineResult = _wrappFunc.call(
+              me,
+              inlineExpLeft + text,
+              options,
+              {
+                controlMessages: [ m ],
+                remainsControlMessages: drop(remainsControlMessages, i),
+                before: before,
+                after: after
+              }
+            );
+
+            if (inlineResult._skip) {
+              return false;
+            }
+
+            text = inlineResult.wrapped.substr(inlineExpLeft.length);
+            count += inlineResult.stat.counts.wrappedTexts;
+          });
+        }
+      }
+    }
+
+    return {
+      text: text,
+      offset: text.length - literal.length,
+      count: count,
+      _skip: _skip
+    };
+  },
+
+  _promptWrap: function(message, left, right, befores, afters,
+                        controlMessages, options) {
+    if (!options.prompt) {
+      return {
+        wrap: true,
+        context: false
+      };
+    }
+
+    var colors = this._config.colors;
+
+    var wrappedPattern = utils.formatTemplate(
+      '{translator}.{message}\\([\\s\\S]+?\\)', null, {
+      translator: options.translator,
+      message: options.message
+    });
+
+    var wrappedReplacer = function(match) {
+      return textStyle(colors.wrapped)(match);
+    };
+
+    var wrappedRegexp = new RegExp(wrappedPattern, 'g');
+
+    var baseBefore = befores[0];
+    var before = befores.slice(1).join('');
+
+    var baseAfter = afters[afters.length - 1];
+    var after = afters.slice(0, afters.length - 1).join('');
+
+    var beforeCrIndex = baseBefore.lastIndexOf('\n');
+    var beforeFragment = (
+      baseBefore.substr(beforeCrIndex !== -1 ? beforeCrIndex + 1 : 0) +
+      before
+    ).replace(wrappedRegexp, wrappedReplacer);
+
+    var afterCrIndex = baseAfter.indexOf('\n');
+    var afterFragment = (
+      after +
+      baseAfter.substr(
+        0, afterCrIndex !== -1 ? afterCrIndex : baseAfter.length
+      )
+    ).replace(wrappedRegexp, wrappedReplacer);
+
+    // WARN: don't use formatTemplate
+    var messageFragment =
+      left.replace(wrappedRegexp, wrappedReplacer) +
+      textStyle(colors.candidateToWrap)(message) +
+      right.replace(wrappedRegexp, wrappedReplacer);
+
+    var query =
+      textStyle(colors.light)(
+        '\n' +
+        repeat('-', 80) + ' line ' + utils.textLineCount(baseBefore) +
+        '\n\n'
+      ) +
+      beforeFragment + messageFragment + afterFragment +
+      textStyle(colors.light)(
+        controlMessages ?
+          ('\n\n...\n' + message + '\n? ') : ('\n\n...? ')
+      );
+
+    var printControlMessages = function() {
+      console.log('');
+      controlMessages.forEach(function(messageInfo) {
+        console.log(textStyle(colors.light)(messageInfo.message));
+      });
+      console.log('');
+    };
+
+    var next;
+    var key;
+
+    do {
+      next = false;
+      key = readlineSync.keyIn(query, {
+        limit: controlMessages ? 'yncql>x' : 'yncx',
+        caseSensitive: true
+      });
+
+      if (key === 'l') {
+        printControlMessages();
+        readlineSync.keyInPause('', {
+          limit: ' ',
+          guide: false
+        });
+        next = true;
+      }
+
+      if (key === 'x') {
+        if (readlineSync.keyInYN('Do you want abort?')) {
+          throw new AbortedByUserError();
+        } else {
+          next = true;
+        }
+      }
+    } while (next);
+
+    return {
+      wrap: key === 'y' || key === 'c',
+      context: key === 'c' ? DEFAULT_MESSAGE_CONTEXT : false,
+      custom: key === 'q',
+      skip: key === '>'
+    };
+  },
+
+  _getQuotes: function(literal) {
+    var r;
+    var left = "'";
+    var right = left;
+
+    if (literal[0] === '"') {
+      left = right = '"';
+    // TODO: ?
+    // } else if (literal.indexOf('[[') === 0) {
+    //   left = '[[';
+    //   right = ']]';
+    } else if ((r = /^\[(=*)\[/.exec(literal))) {
+      left = '[' + r[1] + '[';
+      right = ']' + r[1] + ']';
+    }
+
+    return {
+      left: left,
+      right: right
+    };
+  },
+
+  // @Deprecated
+  __deprecated__wrapTranslationTextsInJs: function(input, options) {
     var me = this;
     var wrapConfig = me._config.js.wrap;
     var wrapBefore = options.translator + '.' + options.message + '(';
@@ -673,11 +1448,8 @@ Harvester.prototype = {
     };
   },
 
-  /**
-   * TODO: docs
-   */
-  // TODO: deduplicate code, see: wrapTranslationTextsInJs
-  wrapTranslationTextsInLua: function(input, options) {
+  // @Deprecated
+  __deprecated__wrapTranslationTextsInLua: function(input, options) {
     var me = this;
     var wrapConfig = me._config.lua.wrap;
     var wrapBefore = options.translator + '.' + options.message + '(';

@@ -1,0 +1,17 @@
+{
+  "Message": false,
+  "Message Message": false,
+  "Message 1": false,
+  "Message 2": false,
+  "Message Z.": false,
+  "Message Z": false,
+  "Message .+": false,
+  ".": false,
+  "([^a-zA-Z0-9]?)([a-zA-Z0-9]*)([^a-zA-Z0-9]?)": false,
+  "Message + Message": false,
+  "Message - Message": false,
+  "Message * Message": false,
+  "Message / Message": false,
+  "Message = Message": false,
+  "Message ? Message": false
+}
