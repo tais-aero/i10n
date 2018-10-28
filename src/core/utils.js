@@ -90,6 +90,7 @@ var buildMessageArguments = function(/*key, context, data*/) {
  * @param {Object} data Data properties.
  * @returns {String} Formatted template.
  */
+// TODO: replace arguments: string, data, options
 var formatTemplate = function(string, options, data) {
   var compiled = template(string, options || TEMPLATE_OPTIONS);
   return compiled(data);
