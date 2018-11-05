@@ -14,10 +14,14 @@ var flatten = require('lodash/array/flatten');
 var map = require('lodash/collection/map');
 var each = require('lodash/collection/each');
 var includes = require('lodash/collection/includes');
+var size = require('lodash/collection/size');
 var defaultsDeep = require('lodash/object/defaultsDeep');
 var get = require('lodash/object/get');
 var trim = require('lodash/string/trim');
 var endsWith = require('lodash/string/endsWith');
+var cloneDeep = require('lodash/lang/cloneDeep');
+
+var chalk = require('chalk');
 
 var testUtils = require('test/utils');
 var Handlebars = require('handlebars');
@@ -25,6 +29,8 @@ var Handlebars = require('handlebars');
 // -----------------------------------------------------------------------------
 
 var harvester = require('src/harvester');
+
+var EN_WORD_CHAR = 'a-zA-Z0-9';
 
 var JS_WRAP_OPTIONS = {
   checkSpaces: true,
@@ -658,7 +664,7 @@ describe('harvester', function() {
 
             each(node.variables, function(v) {
               skip = identifierRegexp.test(v.name) ||
-                identifierRegexp.test(get(v, 'identifier.name'))
+                identifierRegexp.test(get(v, 'identifier.name'));
               return !skip;
             });
 
@@ -686,6 +692,78 @@ describe('harvester', function() {
         test_wrapTranslationTextsInLua('test/data/wrap-translation/lua/test_en', true, wrapOptions);
 
         harvester.setConfig();
+      });
+
+      describe('smart', function() {
+        before(function() {
+          harvester.setConfig({
+            lua: {
+              wrap: {
+                wrapTargetRegExp: /[a-z]/i,
+                excludes: {
+                  properties: null,
+                  nodeTypes: null,
+                  operators: null
+                }
+              }
+            }
+          });
+        });
+
+        after(function() {
+          harvester.setConfig();
+        });
+
+        describe('no control messages', function() {
+          it.skip('within prompt (unskip for test)', function() {
+            var wrapOptions = defaultsDeep({
+              checkSpaces: false
+            }, LUA_WRAP_OPTIONS, {
+              prompt: true
+            });
+
+            this.timeout(300000);
+            test_wrapTranslationTextsInLua('test/data/smart/wrap-translation/lua/within_prompt', true, wrapOptions, true);
+          });
+        });
+
+        describe('control messages', function() {
+          it.skip('within prompt (unskip for test)', function() {
+            var controlMessages = cloneDeep(require('test/data/smart/wrap-translation/lua/control_messages'));
+
+            var wrapOptions = defaultsDeep({
+              checkSpaces: false
+            }, LUA_WRAP_OPTIONS, {
+              controlMessages: controlMessages,
+              wordChar: EN_WORD_CHAR,
+              prompt: true
+            });
+
+            this.timeout(300000);
+            test_wrapTranslationTextsInLua('test/data/smart/wrap-translation/lua/control_messages_within_prompt', true, wrapOptions, true);
+          });
+
+          it('without prompt', function() {
+            var controlMessages = cloneDeep(require('test/data/smart/wrap-translation/lua/control_messages'));
+
+            var wrapOptions = defaultsDeep({
+              checkSpaces: false
+            }, LUA_WRAP_OPTIONS, {
+              controlMessages: controlMessages,
+              wordChar: EN_WORD_CHAR,
+              prompt: false
+            });
+
+            test_wrapTranslationTextsInLua('test/data/smart/wrap-translation/lua/control_messages_without_prompt', true, wrapOptions);
+
+            var result = getSmartWrapResult(controlMessages);
+
+            expect(result.allCount).to.be.equal(5);
+            expect(result.noWraps).to.have.lengthOf(1);
+            expect(result.noWraps).to.include('Message Z');
+            expect(result.noWraps).to.not.include('Message');
+          });
+        });
       });
     });
 
@@ -806,7 +884,7 @@ function test_wrapTranslationTextsInJs(file, dump, wrapOptions) {
   assert_wrapTranslationTextsInJs(result.wrapped, result, expextedJs);
 }
 
-function test_wrapTranslationTextsInLua(file, dump, wrapOptions) {
+function test_wrapTranslationTextsInLua(file, dump, wrapOptions, noReuseTest) {
   wrapOptions = wrapOptions || LUA_WRAP_OPTIONS;
 
   var lua = fs.readFileSync(
@@ -821,9 +899,11 @@ function test_wrapTranslationTextsInLua(file, dump, wrapOptions) {
   dump && fs.outputFileSync('test/tmp/' + file + '_wrapped.lua', result.wrapped);
   assert_wrapTranslationTextsInLua(lua, result, expextedLua);
 
-  result = harvester.wrapTranslationTextsInLua(result.wrapped, wrapOptions);
-  dump && fs.outputFileSync('test/tmp/' + file + '_wrapped_2.lua', result.wrapped);
-  assert_wrapTranslationTextsInLua(result.wrapped, result, expextedLua);
+  if (!noReuseTest) {
+    result = harvester.wrapTranslationTextsInLua(result.wrapped, wrapOptions);
+    dump && fs.outputFileSync('test/tmp/' + file + '_wrapped_2.lua', result.wrapped);
+    assert_wrapTranslationTextsInLua(result.wrapped, result, expextedLua);
+  }
 }
 
 function test_wrapTranslationTextsInHandlebars(file, done, dump, wrapOptions) {
@@ -874,4 +954,27 @@ function assert_wrapTranslationTextsInLua(input, result, expected) {
 
 function assert_wrapTranslationTextsInHandlebars(input, result, expected) {
   assert_wrapTranslationTexts(/[^a-z]MSG\s'/g, input, result, expected);
+}
+
+function getSmartWrapResult(controlMessages) {
+  var allCount = size(controlMessages);
+  var noWraps = [];
+
+  each(controlMessages, function(isWrap, message) {
+    if (!isWrap) {
+      noWraps.push(message);
+    }
+  });
+
+  console.log('Control messages:', allCount);
+  console.log('No wrap messages:', chalk.red(noWraps.length), '...');
+
+  each(noWraps, function(message) {
+    console.log(chalk.red(message));
+  });
+
+  return {
+    allCount: allCount,
+    noWraps: noWraps
+  };
 }
