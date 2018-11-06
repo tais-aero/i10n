@@ -99,8 +99,22 @@ var formatTemplate = function(string, options, data) {
 /**
  * TODO: docs, test
  */
+var textLines = function(text) {
+  return text.split(/\r?\n/);
+};
+
+/**
+ * TODO: docs, test
+ */
+var textLineCount = function(text) {
+  return textLines(text).length;
+};
+
+/**
+ * TODO: docs, test
+ */
 var toStringIndex = function(text, line, column) {
-  var lines = text.split(/\r?\n/);
+  var lines = textLines(text);
   var index = 0;
 
   line--;
@@ -119,5 +133,7 @@ module.exports = {
   unbuildMessageKey: unbuildMessageKey,
   buildMessageArguments: buildMessageArguments,
   formatTemplate: formatTemplate,
+  textLines: textLines,
+  textLineCount: textLineCount,
   toStringIndex: toStringIndex
 };

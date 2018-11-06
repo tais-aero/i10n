@@ -758,8 +758,8 @@ describe('harvester', function() {
 
             var result = getSmartWrapResult(controlMessages);
 
-            expect(result.allCount).to.be.equal(5);
-            expect(result.noWraps).to.have.lengthOf(1);
+            expect(result.allCount).to.be.equal(9);
+            expect(result.noWraps).to.have.lengthOf(4);
             expect(result.noWraps).to.include('Message Z');
             expect(result.noWraps).to.not.include('Message');
           });

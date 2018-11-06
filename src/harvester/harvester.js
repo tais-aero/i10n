@@ -134,6 +134,25 @@ var DEFAULT_CONFIG = {
 };
 
 /**
+ * AbortedByUserError class
+ */
+var AbortedByUserError = function() {
+  Error.call(this) ;
+
+  this.name = 'AbortedByUserError';
+  this.message = 'Aborted by user';
+
+  // No stack
+  // if (Error.captureStackTrace) {
+  //   Error.captureStackTrace(this, AbortedByUserError);
+  // } else {
+  //   this.stack = (new Error()).stack;
+  // }
+};
+
+AbortedByUserError.prototype = Object.create(Error.prototype);
+
+/**
  * Harvester class
  */
 var Harvester = function() {
@@ -496,7 +515,8 @@ Harvester.prototype = {
             'Interactive wrap:\n',
             'y - wrap\n',
             'n - no wrap\n',
-            'c - wrap within context\n'
+            'c - wrap within context\n',
+            'x - abort\n'
           );
         }
 
@@ -509,15 +529,13 @@ Harvester.prototype = {
             }
           );
         } catch (e) {
+          if (e instanceof AbortedByUserError) {
+            throw new AbortedByUserError();
+          }
           // TODO: best way for logging
           console.log('Error:', e);
           globber.resume();
         }
-        // executeWrapTranslationTextsInFile(byFileType, file, wrapOptions,
-        //   function() {
-        //     globber.resume();
-        //   }
-        // );
       })
       .on('abort', function() {
         doResult();
@@ -754,14 +772,15 @@ Harvester.prototype = {
       var isWrap = options.controlMessages ? false : true;
       var text = literal;
       var count = 0;
+      var prompt, contextArg;
 
       if (isWrap) {
-        var prompt = me._promptWrap(
-          '{message}', literal, before, after, options
+        prompt = me._promptWrap(
+          '{message}', literal, [ before ], [ after ], options
         );
 
         if (prompt.wrap) {
-          var contextArg =
+          contextArg =
             prompt.context ? (", '" + prompt.context + "'") : '';
 
           text = wrapBefore + literal + contextArg + wrapAfter;
@@ -795,58 +814,104 @@ Harvester.prototype = {
         );
 
         if (controlMessages.length > 0) {
+          var message = controlMessages[0];
           var inlineExpLeft = 'x=';
-          var messages = controlMessages.join('|');
+
           var regexp = new RegExp(utils.formatTemplate(
-            '([^{wordChar}]?)({messages})([^{wordChar}]?)',
+            '([^{wordChar}])({message})([^{wordChar}])',
             null, {
               wordChar: options.wordChar,
-              messages: messages
+              message: message
             }
           ), 'g');
 
-          text = literal.replace(
-              regexp,
-            function(match, pl, p, pr, offset) {
-              var messageTemplate =
-                literal.substr(0, offset + pl.length) +
-                '{message}' +
-                literal.substr(offset + p.length + pl.length);
+          var dIndex = 1; // = [^{wordChar}] length
+          var reResult = null;
 
-              var prompt = me._promptWrap(
-                messageTemplate, p,
-                _inline ? before.substr(inlineExpLeft.length) : before,
-                after, options
+          while ((reResult = regexp.exec(text))) {
+            var index = reResult.index;
+            var match = reResult[0];
+            var pl = reResult[1];
+            var p = reResult[2];
+            var pr = reResult[3];
+
+            var messageTemplate =
+              text.substr(0, index + pl.length) +
+              '{message}' +
+              text.substr(index + p.length + pl.length);
+
+            prompt = me._promptWrap(
+              messageTemplate, p,
+              _inline ?
+                [ _inline.before, before.substr(inlineExpLeft.length) ] :
+                [ before ],
+              _inline ?
+                [ after, _inline.after ] :
+                [ after ],
+              options
+            );
+
+            if (!prompt.wrap) {
+              regexp.lastIndex -= dIndex;
+              continue;
+            }
+
+            var concatLeft =
+              index > quoteLeft.length - 1 ?
+                quoteRight + ' .. ' : '';
+
+            var left = concatLeft ?
+              (pl + concatLeft + wrapBefore + quoteLeft) :
+              wrapBefore + quoteLeft;
+
+            var concatRight =
+              index + p.length <
+              text.length - quoteRight.length - 1 ?
+                ' .. ' + quoteLeft : '';
+
+            var right = concatRight ?
+              (quoteRight + wrapAfter + concatRight + pr) :
+              quoteRight + wrapAfter;
+
+            contextArg = prompt.context ?
+              (quoteRight + ', ' + quoteLeft + prompt.context) :
+              '';
+
+            var replaced = left + p + contextArg + right;
+
+            text =
+              text.substr(
+                0, index - (concatLeft ? 0 : quoteLeft.length - 1)
+              ) +
+              replaced +
+              text.substr(
+                (concatRight ? 0 : quoteRight.length - 1) + index + match.length
               );
 
-              if (!prompt.wrap) {
-                return match;
-              }
+            regexp.lastIndex = index + replaced.length - dIndex;
 
-              var concatLeft =
-                offset > quoteLeft.length - 1 ?
-                  quoteRight + ' .. ' : '';
+            count++;
+            options.controlMessages[p] = true;
+          }
 
-              var left = concatLeft ?
-                (pl + concatLeft + wrapBefore + "'") : wrapBefore + pl;
-
-              var concatRight =
-                offset + p.length <
-                literal.length - quoteRight.length - 1 ?
-                  ' .. ' + quoteLeft : '';
-
-              var right = concatRight ?
-                ("'" + wrapAfter + concatRight + pr) : pr + wrapAfter;
-
-              var contextArg =
-                prompt.context ? ("', '" + prompt.context) : '';
-
-              count++;
-              options.controlMessages[p] = true;
-
-              return left + p + contextArg + right;
+          controlMessages.forEach(function(m, i) {
+            if (i === 0) {
+              return;
             }
-          );
+
+            var inlineResult = me.wrapTranslationTextsInLua(
+              inlineExpLeft + text,
+              options,
+              {
+                controlMessages: [ m ],
+                before: before,
+                after: after
+              }
+            );
+
+            text = inlineResult.wrapped.substr(inlineExpLeft.length);
+            count += inlineResult.stat.counts.wrappedTexts;
+          });
         }
       }
 
@@ -933,7 +998,7 @@ Harvester.prototype = {
     };
   },
 
-  _promptWrap: function(messageTemplate, message, before, after, options) {
+  _promptWrap: function(messageTemplate, message, befores, afters, options) {
     if (!options.prompt) {
       return {
         wrap: true,
@@ -941,36 +1006,52 @@ Harvester.prototype = {
       };
     }
 
-    var beforeCrIndex = before.lastIndexOf('\n');
-    var beforeFragment = before.substr(beforeCrIndex >= 0 ? beforeCrIndex : 0);
-    var afterCrIndex = after.indexOf('\n');
-    var afterFragment = after.substr(0, afterCrIndex >= 0 ? afterCrIndex : 0);
+    var baseBefore = befores[0];
+    var before = befores.slice(1).join('');
+
+    var baseAfter = afters[afters.length - 1];
+    var after = afters.slice(0, afters.length - 1).join('');
+
+    var beforeCrIndex = baseBefore.lastIndexOf('\n');
+    var beforeFragment =
+      baseBefore.substr(beforeCrIndex !== -1 ? beforeCrIndex + 1 : 0) +
+      before;
+
+    var afterCrIndex = baseAfter.indexOf('\n');
+    var afterFragment =
+      after +
+      baseAfter.substr(
+        0, afterCrIndex !== -1 ? afterCrIndex : baseAfter.length
+      );
 
     var messageFragment = utils.formatTemplate(messageTemplate, null, {
       message: chalk.green(message)
     });
 
-    var indent = chalk.gray('\n...\n');
     var query =
-      indent +
+      chalk.gray(
+        '\n' +
+        repeat('-', 80) + ' line ' + utils.textLineCount(baseBefore) +
+        '\n\n'
+      ) +
       beforeFragment + messageFragment + afterFragment +
-      indent;
+      chalk.gray('\n\n...? ');
 
-    var repeat;
+    var next;
     var key;
 
     do {
-      repeat = false;
+      next = false;
       key = readlineSync.keyIn(query, { limit: 'yncx', caseSensitive: true });
 
       if (key === 'x') {
         if (readlineSync.keyInYN('Do you want abort?')) {
-          throw new Error('Aborted by user');
+          throw new AbortedByUserError();
         } else {
-          repeat = true;
+          next = true;
         }
       }
-    } while (repeat);
+    } while (next);
 
     return {
       wrap: key === 'y' || key === 'c',
