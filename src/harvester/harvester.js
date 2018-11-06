@@ -934,7 +934,21 @@ Harvester.prototype = {
           var after = input.substr(end);
 
           var literal = node.raw;
-          var wrapped = getWrapped(literal, before, after);
+          var wrapped;
+
+          try {
+            wrapped = getWrapped(literal, before, after);
+          } catch (e) {
+            if (e instanceof AbortedByUserError) {
+              throw e;
+            }
+            console.log(e);
+            wrapped = {
+              text: literal,
+              offset: 0,
+              count: 0
+            };
+          }
 
           input = before + wrapped.text + after;
 
