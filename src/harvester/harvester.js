@@ -841,14 +841,14 @@ Harvester.prototype = {
           var inlineExpLeft = 'x=';
 
           var regexp = new RegExp(utils.formatTemplate(
-            '([^{wordChar}])({message})([^{wordChar}])',
+            '([^{boundExcludeChar}])({message})([^{boundExcludeChar}])',
             null, {
-              wordChar: options.wordChar,
+              boundExcludeChar: options.boundExcludeChar,
               message: message
             }
           ), 'g');
 
-          var dIndex = 1; // = [^{wordChar}] length
+          var dIndex = 1; // = [^{boundExcludeChar}] length
           var reResult = null;
 
           while ((reResult = regexp.exec(text))) {

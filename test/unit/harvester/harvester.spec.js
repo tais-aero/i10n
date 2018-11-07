@@ -30,7 +30,7 @@ var Handlebars = require('handlebars');
 
 var harvester = require('src/harvester');
 
-var EN_WORD_CHAR = 'a-zA-Z0-9';
+var BOUND_EXCLUDE_CHAR_EN = '\.a-zA-Z0-9';
 
 var JS_WRAP_OPTIONS = {
   checkSpaces: true,
@@ -736,7 +736,7 @@ describe('harvester', function() {
               checkSpaces: false
             }, LUA_WRAP_OPTIONS, {
               controlMessages: controlMessages,
-              wordChar: EN_WORD_CHAR,
+              boundExcludeChar: BOUND_EXCLUDE_CHAR_EN,
               prompt: true
             });
 
@@ -751,7 +751,7 @@ describe('harvester', function() {
               checkSpaces: false
             }, LUA_WRAP_OPTIONS, {
               controlMessages: controlMessages,
-              wordChar: EN_WORD_CHAR,
+              boundExcludeChar: BOUND_EXCLUDE_CHAR_EN,
               prompt: false
             });
 
