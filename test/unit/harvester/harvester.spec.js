@@ -45,7 +45,8 @@ var LUA_WRAP_OPTIONS = {
   translatorRequireTemplate: "{translator} = require('{translatorRequire}').translator",
   translatorRequire: 'L10n',
   translator: 'tr',
-  message: 'msg'
+  message: 'msg',
+  prompt: false
 };
 
 var HANDLEBARS_WRAP_OPTIONS = {

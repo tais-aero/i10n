@@ -63,6 +63,13 @@ var DEFAULT_CONFIG = {
   POT_FILE_NAME: 'messages.pot',
   PO_FILE_EXT: 'po',
 
+  // see textStyle function
+  colors: {
+    light: 'gray',
+    candidateToWrap: 'green',
+    wrapped: 'gray'
+  },
+
   js: {
     nodeTypes: [ 'CallExpression' ],
     nodeCalleeObjectNames: [ 'translator', 'tr' ],
@@ -131,6 +138,10 @@ var DEFAULT_CONFIG = {
       }
     }
   }
+};
+
+var textStyle = function(style) {
+  return get(chalk, style);
 };
 
 /**
@@ -433,6 +444,7 @@ Harvester.prototype = {
    */
   wrapTranslationTextsInFiles: function(options) {
     var me = this;
+    var colors = me._config.colors;
 
     var byFileTypes = {
       'js': me.wrapTranslationTextsInJsFile,
@@ -511,12 +523,23 @@ Harvester.prototype = {
         var wrapOptions = options.byTypeWrapOptions[type];
 
         if (options.verbose && wrapOptions.prompt) {
+          console.log('\n');
           console.log(
             'Interactive wrap:\n',
-            'y - wrap\n',
-            'n - no wrap\n',
-            'c - wrap within context\n',
-            'x - abort\n'
+            ' ' + textStyle(colors.candidateToWrap)('Message') +
+                  ' - candidate to wrap\n',
+            ' ' + textStyle(colors.wrapped)(utils.formatTemplate(
+                "{translator}.{message}('Message')", null, {
+                  translator: wrapOptions.translator,
+                  message: wrapOptions.message
+                }
+              )) + ' - wrapped\n',
+            '\n',
+            ' Keys:\n',
+            '   y - wrap\n',
+            '   n - no wrap\n',
+            '   c - wrap within context\n',
+            '   x - abort\n'
           );
         }
 
@@ -1020,6 +1043,20 @@ Harvester.prototype = {
       };
     }
 
+    var colors = this._config.colors;
+
+    var wrappedPattern = utils.formatTemplate(
+      '{translator}.{message}\\([\\s\\S]+?\\)', null, {
+      translator: options.translator,
+      message: options.message
+    });
+
+    var wrappedReplacer = function(match) {
+      return textStyle(colors.wrapped)(match);
+    };
+
+    var wrappedRegexp = new RegExp(wrappedPattern, 'g');
+
     var baseBefore = befores[0];
     var before = befores.slice(1).join('');
 
@@ -1027,29 +1064,31 @@ Harvester.prototype = {
     var after = afters.slice(0, afters.length - 1).join('');
 
     var beforeCrIndex = baseBefore.lastIndexOf('\n');
-    var beforeFragment =
+    var beforeFragment = (
       baseBefore.substr(beforeCrIndex !== -1 ? beforeCrIndex + 1 : 0) +
-      before;
+      before
+    ).replace(wrappedRegexp, wrappedReplacer);
 
     var afterCrIndex = baseAfter.indexOf('\n');
-    var afterFragment =
+    var afterFragment = (
       after +
       baseAfter.substr(
         0, afterCrIndex !== -1 ? afterCrIndex : baseAfter.length
-      );
+      )
+    ).replace(wrappedRegexp, wrappedReplacer);
 
     var messageFragment = utils.formatTemplate(messageTemplate, null, {
-      message: chalk.green(message)
-    });
+      message: textStyle(colors.candidateToWrap)(message)
+    }).replace(wrappedRegexp, wrappedReplacer);
 
     var query =
-      chalk.gray(
+      textStyle(colors.light)(
         '\n' +
         repeat('-', 80) + ' line ' + utils.textLineCount(baseBefore) +
         '\n\n'
       ) +
       beforeFragment + messageFragment + afterFragment +
-      chalk.gray('\n\n...? ');
+      textStyle(colors.light)('\n\n...? ');
 
     var next;
     var key;
