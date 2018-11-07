@@ -76,3 +76,18 @@ message_text = ' M '
 
 message_text = 'Message Z.'
 message_text = ' Message Z. '
+
+message_text = 'XXX.Message.XXX'
+message_text = 'XXX-Message-XXX'
+message_text = 'XXX_Message_XXX'
+
+message_text = 'Message + Message'
+message_text = 'Message - Message'
+message_text = 'Message * Message'
+message_text = 'Message / Message'
+message_text = 'Message = Message'
+message_text = 'Message ? Message'
+
+message_text = tr.msg('Message')
+message_text = tr.msg("Message")
+message_text = tr.msg([[Message]])

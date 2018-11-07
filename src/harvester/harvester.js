@@ -799,7 +799,7 @@ Harvester.prototype = {
 
       if (isWrap) {
         prompt = me._promptWrap(
-          '{message}', literal, [ before ], [ after ], options
+          literal, '', '', [ before ], [ after ], options
         );
 
         if (prompt.wrap) {
@@ -820,6 +820,7 @@ Harvester.prototype = {
           quoteRight = "]]";
         }
 
+        // TODO: OPTIMIZE:
         var controlMessages = (_inline && _inline.controlMessages) || sortBy(
           reduce(
             options.controlMessages,
@@ -835,18 +836,19 @@ Harvester.prototype = {
             return -message.length;
           }
         );
+        // console.log(chalk.red(literal));
+        // console.log(chalk.cyan(controlMessages));
 
         if (controlMessages.length > 0) {
           var message = controlMessages[0];
           var inlineExpLeft = 'x=';
 
-          var regexp = new RegExp(utils.formatTemplate(
-            '([^{boundExcludeChar}])({message})([^{boundExcludeChar}])',
-            null, {
-              boundExcludeChar: options.boundExcludeChar,
-              message: message
-            }
-          ), 'g');
+          // WARN: don't use formatTemplate
+          var bound = '([^' + options.boundExcludeChar + '])';
+          var regexp = new RegExp(
+            bound + '(' + utils.escapeRegExp(message) + ')' + bound,
+            'g'
+          );
 
           var dIndex = 1; // = [^{boundExcludeChar}] length
           var reResult = null;
@@ -858,13 +860,10 @@ Harvester.prototype = {
             var p = reResult[2];
             var pr = reResult[3];
 
-            var messageTemplate =
-              text.substr(0, index + pl.length) +
-              '{message}' +
-              text.substr(index + p.length + pl.length);
-
             prompt = me._promptWrap(
-              messageTemplate, p,
+              p,
+              text.substr(0, index + pl.length),
+              text.substr(index + p.length + pl.length),
               _inline ?
                 [ _inline.before, before.substr(inlineExpLeft.length) ] :
                 [ before ],
@@ -1035,7 +1034,7 @@ Harvester.prototype = {
     };
   },
 
-  _promptWrap: function(messageTemplate, message, befores, afters, options) {
+  _promptWrap: function(message, left, right, befores, afters, options) {
     if (!options.prompt) {
       return {
         wrap: true,
@@ -1077,9 +1076,11 @@ Harvester.prototype = {
       )
     ).replace(wrappedRegexp, wrappedReplacer);
 
-    var messageFragment = utils.formatTemplate(messageTemplate, null, {
-      message: textStyle(colors.candidateToWrap)(message)
-    }).replace(wrappedRegexp, wrappedReplacer);
+    // WARN: don't use formatTemplate
+    var messageFragment =
+      left.replace(wrappedRegexp, wrappedReplacer) +
+      textStyle(colors.candidateToWrap)(message) +
+      right.replace(wrappedRegexp, wrappedReplacer);
 
     var query =
       textStyle(colors.light)(

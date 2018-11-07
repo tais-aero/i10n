@@ -126,6 +126,14 @@ var toStringIndex = function(text, line, column) {
   return index + column + line;
 };
 
+/**
+ * TODO: docs, test
+ */
+var escapeRegExp = function(text) {
+  // return text.replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+};
+
 // -----------------------------------------------------------------------------
 
 module.exports = {
@@ -135,5 +143,6 @@ module.exports = {
   formatTemplate: formatTemplate,
   textLines: textLines,
   textLineCount: textLineCount,
-  toStringIndex: toStringIndex
+  toStringIndex: toStringIndex,
+  escapeRegExp: escapeRegExp
 };

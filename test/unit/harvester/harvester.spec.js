@@ -30,7 +30,7 @@ var Handlebars = require('handlebars');
 
 var harvester = require('src/harvester');
 
-var BOUND_EXCLUDE_CHAR_EN = '\.a-zA-Z0-9';
+var BOUND_EXCLUDE_CHAR_EN = '\\.\\-_a-zA-Z0-9';
 
 var JS_WRAP_OPTIONS = {
   checkSpaces: true,
@@ -45,8 +45,7 @@ var LUA_WRAP_OPTIONS = {
   translatorRequireTemplate: "{translator} = require('{translatorRequire}').translator",
   translatorRequire: 'L10n',
   translator: 'tr',
-  message: 'msg',
-  prompt: false
+  message: 'msg'
 };
 
 var HANDLEBARS_WRAP_OPTIONS = {
@@ -756,10 +755,11 @@ describe('harvester', function() {
             });
 
             test_wrapTranslationTextsInLua('test/data/smart/wrap-translation/lua/control_messages_without_prompt', true, wrapOptions);
+            // test_wrapTranslationTextsInLua('test/data/smart/wrap-translation/lua/control_messages_within_prompt', true, wrapOptions);
 
             var result = getSmartWrapResult(controlMessages);
 
-            expect(result.allCount).to.be.equal(9);
+            expect(result.allCount).to.be.equal(15);
             expect(result.noWraps).to.have.lengthOf(4);
             expect(result.noWraps).to.include('Message Z');
             expect(result.noWraps).to.not.include('Message');
@@ -862,6 +862,45 @@ describe('harvester', function() {
       });
     });
 
+    describe('cadonix', function() {
+      before(function() {
+        harvester.setConfig({
+          lua: {
+            wrap: {
+              wrapTargetRegExp: /[a-z]/i,
+              excludes: {
+                properties: null,
+                nodeTypes: null,
+                operators: null
+              }
+            }
+          }
+        });
+      });
+
+      after(function() {
+        harvester.setConfig();
+      });
+
+      describe('Lua', function() {
+        it.skip('1.lua (unskip for test)', function() {
+          var controlMessages = cloneDeep(require('test/data/cadonix/wrap-translation/lua/control_messages.json'));
+
+          var wrapOptions = defaultsDeep({
+            checkSpaces: false
+          }, LUA_WRAP_OPTIONS, {
+            controlMessages: controlMessages,
+            boundExcludeChar: BOUND_EXCLUDE_CHAR_EN,
+            prompt: false
+          });
+
+          this.timeout(300000);
+          // test_wrapTranslationTextsInLua('test/data/cadonix/wrap-translation/lua/1', true, wrapOptions, true);
+          // test_wrapTranslationTextsInLua('test/data/cadonix/wrap-translation/lua/dashboard', true, wrapOptions, true);
+          test_wrapTranslationTextsInLua('test/data/cadonix/wrap-translation/lua/projects2', true, wrapOptions, true);
+        });
+      });
+    });
   });
 });
 
