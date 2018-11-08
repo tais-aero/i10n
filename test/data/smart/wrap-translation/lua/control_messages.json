@@ -6,7 +6,7 @@
   "Message Z.": false,
   "Message Z": false,
   "Message .+": false,
-  ".+": false,
+  ".": false,
   "([^a-zA-Z0-9]?)([a-zA-Z0-9]*)([^a-zA-Z0-9]?)": false,
   "Message + Message": false,
   "Message - Message": false,

@@ -6,6 +6,7 @@ var get = require('lodash/object/get');
 var set = require('lodash/object/set');
 var reduce = require('lodash/collection/reduce');
 var includes = require('lodash/collection/includes');
+var filter = require('lodash/collection/filter');
 var sortBy = require('lodash/collection/sortBy');
 var repeat = require('lodash/string/repeat');
 
@@ -66,6 +67,7 @@ var DEFAULT_CONFIG = {
   // see textStyle function
   colors: {
     light: 'gray',
+    info: 'blue',
     candidateToWrap: 'green',
     wrapped: 'gray'
   },
@@ -490,7 +492,10 @@ Harvester.prototype = {
     var fileCount = 0;
 
     if (options.verbose) {
-      console.log('Files to process:', files.length);
+      console.log(
+        textStyle(colors.info)('Files to process:'),
+        textStyle(colors.info)(files.length)
+      );
     }
 
     var globber = new glob.Glob(options.pattern, {
@@ -507,13 +512,16 @@ Harvester.prototype = {
         var byFileType = byFileTypes[type];
 
         if (options.verbose) {
-          console.log(utils.formatTemplate(
+          console.log(textStyle(colors.info)(utils.formatTemplate(
             'Processing file: {current} of {all}', null, {
               current: fileCount,
               all: files.length
             }
-          ));
-          console.log(file, '...');
+          )));
+          console.log(
+            textStyle(colors.info)(file),
+            textStyle(colors.info)('...')
+          );
         }
 
         if (!byFileType) {
@@ -767,6 +775,69 @@ Harvester.prototype = {
   /**
    * TODO: docs
    */
+  prepareControlMessages: function(controlMessages, options) {
+    options = options || {};
+
+    var messages = sortBy(
+      reduce(
+        controlMessages,
+        function(result, originalValue, message) {
+          var include = options.filter ?
+            options.filter(message, originalValue) : true;
+
+          if (include) {
+            result.push({
+              message: message,
+              _originalValue: originalValue,
+              counts: {
+                candidate: 0,
+                wrapped: 0
+              }
+            });
+          }
+
+          return result;
+        },
+        []
+      ),
+      function(messageInfo) {
+        if (options.sorter) {
+          return options.sorter(
+            messageInfo.message, messageInfo._originalValue
+          );
+        }
+        return -messageInfo.message.length;
+      }
+    );
+
+    return messages;
+  },
+
+  _getQuotes: function(literal) {
+    var r;
+    var left = "'";
+    var right = left;
+
+    if (literal[0] === '"') {
+      left = right = '"';
+    // TODO: ?
+    // } else if (literal.indexOf('[[') === 0) {
+    //   left = '[[';
+    //   right = ']]';
+    } else if ((r = /^\[(=*)\[/.exec(literal))) {
+      left = '[' + r[1] + '[';
+      right = ']' + r[1] + ']';
+    }
+
+    return {
+      left: left,
+      right: right
+    };
+  },
+
+  /**
+   * TODO: docs
+   */
   // TODO: deduplicate code, see: wrapTranslationTextsInJs
   wrapTranslationTextsInLua: function(input, options, _inline) {
     var me = this;
@@ -810,37 +881,18 @@ Harvester.prototype = {
           count = 1;
         }
       } else {
-        var quoteLeft = "'";
-        var quoteRight = quoteLeft;
+        var quotes = me._getQuotes(literal);
 
-        if (literal[0] === '"') {
-          quoteLeft = quoteRight = '"';
-        } else if (literal[0] === '[') {
-          quoteLeft = "[[";
-          quoteRight = "]]";
-        }
-
-        // TODO: OPTIMIZE:
-        var controlMessages = (_inline && _inline.controlMessages) || sortBy(
-          reduce(
-            options.controlMessages,
-            function(result, v, message) {
-              if (literal.indexOf(message) !== -1) {
-                result.push(message);
-              }
-              return result;
-            },
-            []
-          ),
-          function(message) {
-            return -message.length;
+        var controlMessages = (_inline && _inline.controlMessages) || filter(
+          options.controlMessages,
+          function(messageInfo) {
+            return literal.indexOf(messageInfo.message) !== -1;
           }
         );
-        // console.log(chalk.red(literal));
-        // console.log(chalk.cyan(controlMessages));
 
         if (controlMessages.length > 0) {
-          var message = controlMessages[0];
+          var messageInfo = controlMessages[0];
+          var message = messageInfo.message;
           var inlineExpLeft = 'x=';
 
           // WARN: don't use formatTemplate
@@ -859,6 +911,8 @@ Harvester.prototype = {
             var pl = reResult[1];
             var p = reResult[2];
             var pr = reResult[3];
+
+            messageInfo.counts.candidate++;
 
             prompt = me._promptWrap(
               p,
@@ -879,41 +933,42 @@ Harvester.prototype = {
             }
 
             var concatLeft =
-              index > quoteLeft.length - 1 ?
-                quoteRight + ' .. ' : '';
+              index > quotes.left.length - 1 ?
+                quotes.right + ' .. ' : '';
 
             var left = concatLeft ?
-              (pl + concatLeft + wrapBefore + quoteLeft) :
-              wrapBefore + quoteLeft;
+              (pl + concatLeft + wrapBefore + quotes.left) :
+              wrapBefore + quotes.left;
 
             var concatRight =
               index + p.length <
-              text.length - quoteRight.length - 1 ?
-                ' .. ' + quoteLeft : '';
+              text.length - quotes.right.length - 1 ?
+                ' .. ' + quotes.left : '';
 
             var right = concatRight ?
-              (quoteRight + wrapAfter + concatRight + pr) :
-              quoteRight + wrapAfter;
+              (quotes.right + wrapAfter + concatRight + pr) :
+              quotes.right + wrapAfter;
 
             contextArg = prompt.context ?
-              (quoteRight + ', ' + quoteLeft + prompt.context) :
+              (quotes.right + ', ' + quotes.left + prompt.context) :
               '';
 
             var replaced = left + p + contextArg + right;
 
             text =
               text.substr(
-                0, index - (concatLeft ? 0 : quoteLeft.length - 1)
+                0, index - (concatLeft ? 0 : quotes.left.length - 1)
               ) +
               replaced +
               text.substr(
-                (concatRight ? 0 : quoteRight.length - 1) + index + match.length
+                (concatRight ? 0 : quotes.right.length - 1) +
+                  index + match.length
               );
 
             regexp.lastIndex = index + replaced.length - dIndex;
 
             count++;
-            options.controlMessages[p] = true;
+            messageInfo.counts.wrapped++;
           }
 
           controlMessages.forEach(function(m, i) {

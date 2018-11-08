@@ -5,20 +5,28 @@ local log = require('utils/log')
 message_text = 'Message'
 message_text = "Message"
 message_text = [[Message]]
+message_text = [=[Message]=]
+message_text = [==[Message]==]
 
 message_text = 'Message 1 Message 2'
 message_text = "Message 1 Message 2"
 message_text = [[Message 1 Message 2]]
+message_text = [=[Message 1 Message 2]=]
+message_text = [==[Message 1 Message 2]==]
 
 --------------------------------------------------------------------------------
 
 message_text = 'Message 1 XXX Message 2'
 message_text = "Message 1 XXX Message 2"
 message_text = [[Message 1 XXX Message 2]]
+message_text = [=[Message 1 XXX Message 2]=]
+message_text = [==[Message 1 XXX Message 2]==]
 
 message_text = 'XXX Message 1 XXX Message 2 XXX'
 message_text = "XXX Message 1 XXX Message 2 XXX"
 message_text = [[XXX Message 1 XXX Message 2 XXX]]
+message_text = [=[XXX Message 1 XXX Message 2 XXX]=]
+message_text = [==[XXX Message 1 XXX Message 2 XXX]==]
 
 --------------------------------------------------------------------------------
 
@@ -62,6 +70,16 @@ message_html = [[
     <b>Message Message</b>
   </div>addMessage MessageAdd add Message
 ]] -- Some comment
+
+message_html = [===[
+  <div class="block">
+    Message <div class="row">
+              <a class="link"><i class="icon"></i> Message 1</a> Message 2 - Some text
+              <input type="text" placeholder="Message"/>
+            </div>
+    <b>Message Message</b>
+  </div>addMessage MessageAdd add Message
+]===] -- Some comment
 
 --------------------------------------------------------------------------------
 

@@ -14,11 +14,13 @@ var flatten = require('lodash/array/flatten');
 var map = require('lodash/collection/map');
 var each = require('lodash/collection/each');
 var includes = require('lodash/collection/includes');
+var reduce = require('lodash/collection/reduce');
 var size = require('lodash/collection/size');
 var defaultsDeep = require('lodash/object/defaultsDeep');
 var get = require('lodash/object/get');
 var trim = require('lodash/string/trim');
 var endsWith = require('lodash/string/endsWith');
+var repeat = require('lodash/string/repeat');
 var cloneDeep = require('lodash/lang/cloneDeep');
 
 var chalk = require('chalk');
@@ -29,6 +31,8 @@ var Handlebars = require('handlebars');
 // -----------------------------------------------------------------------------
 
 var harvester = require('src/harvester');
+
+var HR = repeat('-', 80);
 
 var BOUND_EXCLUDE_CHAR_EN = '\\.\\-_a-zA-Z0-9';
 
@@ -729,7 +733,7 @@ describe('harvester', function() {
 
         describe('control messages', function() {
           it.skip('within prompt (unskip for test)', function() {
-            var controlMessages = cloneDeep(require('test/data/smart/wrap-translation/lua/control_messages'));
+            var controlMessages = harvester.prepareControlMessages(require('test/data/smart/wrap-translation/lua/control_messages'));
 
             var wrapOptions = defaultsDeep({
               checkSpaces: false
@@ -741,10 +745,20 @@ describe('harvester', function() {
 
             this.timeout(300000);
             test_wrapTranslationTextsInLua('test/data/smart/wrap-translation/lua/control_messages_within_prompt', true, wrapOptions, true);
+            console.log(testUtils.printObject(getSmartWrapResult(controlMessages)));
           });
 
           it('without prompt', function() {
-            var controlMessages = cloneDeep(require('test/data/smart/wrap-translation/lua/control_messages'));
+            var controlMessages = harvester.prepareControlMessages(
+              require('test/data/smart/wrap-translation/lua/control_messages'), {
+                filter: function(message/*, value*/) {
+                  return message.length > 1;
+                },
+                sorter: function(message/*, value*/) {
+                  return -message.length;
+                }
+              }
+            );
 
             var wrapOptions = defaultsDeep({
               checkSpaces: false
@@ -755,14 +769,24 @@ describe('harvester', function() {
             });
 
             test_wrapTranslationTextsInLua('test/data/smart/wrap-translation/lua/control_messages_without_prompt', true, wrapOptions);
-            // test_wrapTranslationTextsInLua('test/data/smart/wrap-translation/lua/control_messages_within_prompt', true, wrapOptions);
+            // test_wrapTranslationTextsInLua('test/data/smart/wrap-translation/lua/control_messages_within_prompt', true, wrapOptions, true);
 
             var result = getSmartWrapResult(controlMessages);
 
-            expect(result.allCount).to.be.equal(15);
-            expect(result.noWraps).to.have.lengthOf(4);
+            expect(result.allCount).to.be.equal(14);
+            expect(result.noWraps).to.have.lengthOf(3);
             expect(result.noWraps).to.include('Message Z');
-            expect(result.noWraps).to.not.include('Message');
+            expect(result.noWraps).to.not.include('Message 1');
+
+            expect(result.messagesMap['Message Z'].counts.candidate)
+              .to.be.equal(0);
+            expect(result.messagesMap['Message Z'].counts.wrapped)
+              .to.be.equal(0);
+
+            expect(result.messagesMap['Message 1'].counts.candidate)
+              .to.be.equal(20);
+            expect(result.messagesMap['Message 1'].counts.wrapped)
+              .to.be.equal(20);
           });
         });
       });
@@ -884,7 +908,7 @@ describe('harvester', function() {
 
       describe('Lua', function() {
         it.skip('1.lua (unskip for test)', function() {
-          var controlMessages = cloneDeep(require('test/data/cadonix/wrap-translation/lua/control_messages.json'));
+          var controlMessages = harvester.prepareControlMessages(require('test/data/cadonix/wrap-translation/lua/control_messages.json'));
 
           var wrapOptions = defaultsDeep({
             checkSpaces: false
@@ -895,9 +919,9 @@ describe('harvester', function() {
           });
 
           this.timeout(300000);
-          // test_wrapTranslationTextsInLua('test/data/cadonix/wrap-translation/lua/1', true, wrapOptions, true);
+          test_wrapTranslationTextsInLua('test/data/cadonix/wrap-translation/lua/1', true, wrapOptions, true);
           // test_wrapTranslationTextsInLua('test/data/cadonix/wrap-translation/lua/dashboard', true, wrapOptions, true);
-          test_wrapTranslationTextsInLua('test/data/cadonix/wrap-translation/lua/projects2', true, wrapOptions, true);
+          // test_wrapTranslationTextsInLua('test/data/cadonix/wrap-translation/lua/projects2', true, wrapOptions, true);
         });
       });
     });
@@ -924,26 +948,34 @@ function test_wrapTranslationTextsInJs(file, dump, wrapOptions) {
   assert_wrapTranslationTextsInJs(result.wrapped, result, expextedJs);
 }
 
-function test_wrapTranslationTextsInLua(file, dump, wrapOptions, noReuseTest) {
+function test_wrapTranslationTextsInLua(file, dump, wrapOptions, onlyPrint) {
   wrapOptions = wrapOptions || LUA_WRAP_OPTIONS;
 
   var lua = fs.readFileSync(
     file + '.lua', 'utf8'
   );
 
+  var result = harvester.wrapTranslationTextsInLua(lua, wrapOptions);
+
+  if (onlyPrint) {
+    console.log('\n');
+    console.log(chalk.gray(HR));
+    console.log(chalk.cyan(result.wrapped));
+    console.log(chalk.gray(HR));
+    console.log('\n');
+    return;
+  }
+
   var expextedLua = fs.readFileSync(
     file + '_wrapped.lua', 'utf8'
   );
 
-  var result = harvester.wrapTranslationTextsInLua(lua, wrapOptions);
   dump && fs.outputFileSync('test/tmp/' + file + '_wrapped.lua', result.wrapped);
   assert_wrapTranslationTextsInLua(lua, result, expextedLua);
 
-  if (!noReuseTest) {
-    result = harvester.wrapTranslationTextsInLua(result.wrapped, wrapOptions);
-    dump && fs.outputFileSync('test/tmp/' + file + '_wrapped_2.lua', result.wrapped);
-    assert_wrapTranslationTextsInLua(result.wrapped, result, expextedLua);
-  }
+  result = harvester.wrapTranslationTextsInLua(result.wrapped, wrapOptions);
+  dump && fs.outputFileSync('test/tmp/' + file + '_wrapped_2.lua', result.wrapped);
+  assert_wrapTranslationTextsInLua(result.wrapped, result, expextedLua);
 }
 
 function test_wrapTranslationTextsInHandlebars(file, done, dump, wrapOptions) {
@@ -1000,21 +1032,24 @@ function getSmartWrapResult(controlMessages) {
   var allCount = size(controlMessages);
   var noWraps = [];
 
-  each(controlMessages, function(isWrap, message) {
-    if (!isWrap) {
-      noWraps.push(message);
+  var messagesMap = reduce(controlMessages, function(result, messageInfo) {
+    result[messageInfo.message] = messageInfo;
+    if (messageInfo.counts.wrapped === 0) {
+      noWraps.push(messageInfo.message);
     }
-  });
+    return result;
+  }, {});
 
   console.log('Control messages:', allCount);
-  console.log('No wrap messages:', chalk.red(noWraps.length), '...');
+  console.log('No wrap messages:', chalk.blueBright(noWraps.length), '...');
 
   each(noWraps, function(message) {
-    console.log(chalk.red(message));
+    console.log(chalk.blue(message));
   });
 
   return {
     allCount: allCount,
-    noWraps: noWraps
+    noWraps: noWraps,
+    messagesMap: messagesMap
   };
 }

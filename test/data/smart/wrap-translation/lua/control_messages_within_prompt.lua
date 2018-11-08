@@ -1,7 +1,3 @@
--- TODO:
--- local message = [=[Message]=]
--- local message = [==[Message]==]
-
 local message = 'Message'
 
 local log = require('utils/log')

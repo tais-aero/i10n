@@ -7,20 +7,28 @@ local log = require('utils/log')
 message_text = tr.msg('Message')
 message_text = tr.msg("Message")
 message_text = tr.msg([[Message]])
+message_text = tr.msg([=[Message]=])
+message_text = tr.msg([==[Message]==])
 
 message_text = tr.msg('Message 1') .. ' ' .. tr.msg('Message 2')
 message_text = tr.msg("Message 1") .. " " .. tr.msg("Message 2")
 message_text = tr.msg([[Message 1]]) .. [[ ]] .. tr.msg([[Message 2]])
+message_text = tr.msg([=[Message 1]=]) .. [=[ ]=] .. tr.msg([=[Message 2]=])
+message_text = tr.msg([==[Message 1]==]) .. [==[ ]==] .. tr.msg([==[Message 2]==])
 
 --------------------------------------------------------------------------------
 
 message_text = tr.msg('Message 1') .. ' XXX ' .. tr.msg('Message 2')
 message_text = tr.msg("Message 1") .. " XXX " .. tr.msg("Message 2")
 message_text = tr.msg([[Message 1]]) .. [[ XXX ]] .. tr.msg([[Message 2]])
+message_text = tr.msg([=[Message 1]=]) .. [=[ XXX ]=] .. tr.msg([=[Message 2]=])
+message_text = tr.msg([==[Message 1]==]) .. [==[ XXX ]==] .. tr.msg([==[Message 2]==])
 
 message_text = 'XXX ' .. tr.msg('Message 1') .. ' XXX ' .. tr.msg('Message 2') .. ' XXX'
 message_text = "XXX " .. tr.msg("Message 1") .. " XXX " .. tr.msg("Message 2") .. " XXX"
 message_text = [[XXX ]] .. tr.msg([[Message 1]]) .. [[ XXX ]] .. tr.msg([[Message 2]]) .. [[ XXX]]
+message_text = [=[XXX ]=] .. tr.msg([=[Message 1]=]) .. [=[ XXX ]=] .. tr.msg([=[Message 2]=]) .. [=[ XXX]=]
+message_text = [==[XXX ]==] .. tr.msg([==[Message 1]==]) .. [==[ XXX ]==] .. tr.msg([==[Message 2]==]) .. [==[ XXX]==]
 
 --------------------------------------------------------------------------------
 
@@ -64,6 +72,16 @@ message_html = [[
     <b>]] .. tr.msg([[Message Message]]) .. [[</b>
   </div>addMessage MessageAdd add ]] .. tr.msg([[Message]]) .. [[
 ]] -- Some comment
+
+message_html = [===[
+  <div class="block">
+    ]===] .. tr.msg([===[Message]===]) .. [===[ <div class="row">
+              <a class="link"><i class="icon"></i> ]===] .. tr.msg([===[Message 1]===]) .. [===[</a> ]===] .. tr.msg([===[Message 2]===]) .. [===[ - Some text
+              <input type="text" placeholder="]===] .. tr.msg([===[Message]===]) .. [===["/>
+            </div>
+    <b>]===] .. tr.msg([===[Message Message]===]) .. [===[</b>
+  </div>addMessage MessageAdd add ]===] .. tr.msg([===[Message]===]) .. [===[
+]===] -- Some comment
 
 --------------------------------------------------------------------------------
 
