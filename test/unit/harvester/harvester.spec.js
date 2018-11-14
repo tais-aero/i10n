@@ -21,7 +21,6 @@ var get = require('lodash/object/get');
 var trim = require('lodash/string/trim');
 var endsWith = require('lodash/string/endsWith');
 var repeat = require('lodash/string/repeat');
-var cloneDeep = require('lodash/lang/cloneDeep');
 
 var chalk = require('chalk');
 
@@ -829,7 +828,13 @@ describe('harvester', function() {
           lua: LUA_WRAP_OPTIONS,
           handlebars: HANDLEBARS_WRAP_OPTIONS
         },
-        resultCallback: function(err, result) {
+        resultCallback: function(err, result, abort) {
+          if (abort) {
+            console.log('...aborted.');
+            done();
+            return;
+          }
+
           expect(err).to.be.null;
           expect(result.files).to.have.lengthOf(expectedFileCount);
           expect(result.stat.counts.wrappedTexts).to.be.at.least(1);
@@ -1041,7 +1046,7 @@ function getSmartWrapResult(controlMessages) {
   }, {});
 
   console.log('Control messages:', allCount);
-  console.log('No wrap messages:', chalk.blueBright(noWraps.length), '...');
+  console.log('No wrapped messages:', chalk.blue(noWraps.length), '...');
 
   each(noWraps, function(message) {
     console.log(chalk.blue(message));

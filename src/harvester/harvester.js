@@ -1,6 +1,7 @@
 'use strict';
 
 var isString = require('lodash/lang/isString');
+var cloneDeep = require('lodash/lang/cloneDeep');
 var merge = require('lodash/object/merge');
 var get = require('lodash/object/get');
 var set = require('lodash/object/set');
@@ -68,6 +69,7 @@ var DEFAULT_CONFIG = {
   colors: {
     light: 'gray',
     info: 'blue',
+    warning: 'red',
     candidateToWrap: 'green',
     wrapped: 'gray'
   },
@@ -463,8 +465,8 @@ Harvester.prototype = {
       files: []
     };
 
-    var doResult = function(err) {
-      options.resultCallback(err || null, result);
+    var doResult = function(err, abort) {
+      options.resultCallback(err || null, result, abort);
     };
 
     var executeWrapTranslationTextsInFile = function(func, file, wrapOptions,
@@ -561,7 +563,8 @@ Harvester.prototype = {
           );
         } catch (e) {
           if (e instanceof AbortedByUserError) {
-            throw new AbortedByUserError();
+            globber.abort();
+            return;
           }
           // TODO: best way for logging
           console.log('Error:', e);
@@ -569,7 +572,7 @@ Harvester.prototype = {
         }
       })
       .on('abort', function() {
-        doResult();
+        doResult(null, true);
       })
       .on('error', function() {
         doResult(true);
@@ -813,26 +816,14 @@ Harvester.prototype = {
     return messages;
   },
 
-  _getQuotes: function(literal) {
-    var r;
-    var left = "'";
-    var right = left;
-
-    if (literal[0] === '"') {
-      left = right = '"';
-    // TODO: ?
-    // } else if (literal.indexOf('[[') === 0) {
-    //   left = '[[';
-    //   right = ']]';
-    } else if ((r = /^\[(=*)\[/.exec(literal))) {
-      left = '[' + r[1] + '[';
-      right = ']' + r[1] + ']';
-    }
-
-    return {
-      left: left,
-      right: right
-    };
+  _addCustomMessageToControlMessages: function(customMessage, controlMessages) {
+    controlMessages.push(customMessage);
+    return sortBy(
+      controlMessages,
+      function(messageInfo) {
+        return -messageInfo.message.length;
+      }
+    );
   },
 
   /**
@@ -842,6 +833,7 @@ Harvester.prototype = {
   wrapTranslationTextsInLua: function(input, options, _inline) {
     var me = this;
     var wrapConfig = me._config.lua.wrap;
+    var colors = me._config.colors;
     var wrapBefore = options.translator + '.' + options.message + '(';
     var wrapAfter = ')';
     var offset = 0;
@@ -892,83 +884,144 @@ Harvester.prototype = {
 
         if (controlMessages.length > 0) {
           var messageInfo = controlMessages[0];
-          var message = messageInfo.message;
-          var inlineExpLeft = 'x=';
+          var custom = false;
+          var customMessageInfo = {
+            message: null,
+            counts: {
+              candidate: 0,
+              wrapped: 0
+            }
+          };
 
-          // WARN: don't use formatTemplate
-          var bound = '([^' + options.boundExcludeChar + '])';
-          var regexp = new RegExp(
-            bound + '(' + utils.escapeRegExp(message) + ')' + bound,
-            'g'
-          );
+          while (true) {
+            var message = messageInfo.message;
+            var inlineExpLeft = 'x=';
 
-          var dIndex = 1; // = [^{boundExcludeChar}] length
-          var reResult = null;
-
-          while ((reResult = regexp.exec(text))) {
-            var index = reResult.index;
-            var match = reResult[0];
-            var pl = reResult[1];
-            var p = reResult[2];
-            var pr = reResult[3];
-
-            messageInfo.counts.candidate++;
-
-            prompt = me._promptWrap(
-              p,
-              text.substr(0, index + pl.length),
-              text.substr(index + p.length + pl.length),
-              _inline ?
-                [ _inline.before, before.substr(inlineExpLeft.length) ] :
-                [ before ],
-              _inline ?
-                [ after, _inline.after ] :
-                [ after ],
-              options
+            // WARN: don't use formatTemplate
+            var bound = '([^' + options.boundExcludeChar + '])';
+            var regexp = new RegExp(
+              bound + '(' + utils.escapeRegExp(message) + ')' + bound,
+              'g'
             );
 
-            if (!prompt.wrap) {
-              regexp.lastIndex -= dIndex;
-              continue;
-            }
+            var dIndex = 1; // = [^{boundExcludeChar}] length
+            var reResult = null;
 
-            var concatLeft =
-              index > quotes.left.length - 1 ?
-                quotes.right + ' .. ' : '';
+            while ((reResult = regexp.exec(text))) {
+              var index = reResult.index;
+              var match = reResult[0];
+              var pl = reResult[1];
+              var p = reResult[2];
+              var pr = reResult[3];
 
-            var left = concatLeft ?
-              (pl + concatLeft + wrapBefore + quotes.left) :
-              wrapBefore + quotes.left;
+              messageInfo.counts.candidate++;
 
-            var concatRight =
-              index + p.length <
-              text.length - quotes.right.length - 1 ?
-                ' .. ' + quotes.left : '';
+              if (customMessageInfo.message) {
+                console.log(textStyle(colors.info)(
+                  '\nTrying with your message...'
+                ));
+              }
 
-            var right = concatRight ?
-              (quotes.right + wrapAfter + concatRight + pr) :
-              quotes.right + wrapAfter;
-
-            contextArg = prompt.context ?
-              (quotes.right + ', ' + quotes.left + prompt.context) :
-              '';
-
-            var replaced = left + p + contextArg + right;
-
-            text =
-              text.substr(
-                0, index - (concatLeft ? 0 : quotes.left.length - 1)
-              ) +
-              replaced +
-              text.substr(
-                (concatRight ? 0 : quotes.right.length - 1) +
-                  index + match.length
+              prompt = me._promptWrap(
+                p,
+                text.substr(0, index + pl.length),
+                text.substr(index + p.length + pl.length),
+                _inline ?
+                  [ _inline.before, before.substr(inlineExpLeft.length) ] :
+                  [ before ],
+                _inline ?
+                  [ after, _inline.after ] :
+                  [ after ],
+                options
               );
 
-            regexp.lastIndex = index + replaced.length - dIndex;
+              if (prompt.custom) {
+                custom = true;
+                break;
+              } else {
+                custom = false;
+              }
 
-            count++;
-            messageInfo.counts.wrapped++;
+              if (!prompt.wrap) {
+                regexp.lastIndex -= dIndex;
+                continue;
+              }
+
+              var concatLeft =
+                index > quotes.left.length - 1 ?
+                  quotes.right + ' .. ' : '';
+
+              var left = concatLeft ?
+                (pl + concatLeft + wrapBefore + quotes.left) :
+                wrapBefore + quotes.left;
+
+              var concatRight =
+                index + p.length <
+                text.length - quotes.right.length - 1 ?
+                  ' .. ' + quotes.left : '';
+
+              var right = concatRight ?
+                (quotes.right + wrapAfter + concatRight + pr) :
+                quotes.right + wrapAfter;
+
+              contextArg = prompt.context ?
+                (quotes.right + ', ' + quotes.left + prompt.context) :
+                '';
+
+              var replaced = left + p + contextArg + right;
+
+              text =
+                text.substr(
+                  0, index - (concatLeft ? 0 : quotes.left.length - 1)
+                ) +
+                replaced +
+                text.substr(
+                  (concatRight ? 0 : quotes.right.length - 1) +
+                    index + match.length
+                );
+
+              regexp.lastIndex = index + replaced.length - dIndex;
+
+              count++;
+              messageInfo.counts.wrapped++;
+
+              if (customMessageInfo.message) {
+                options.controlMessages = me._addCustomMessageToControlMessages(
+                  cloneDeep(customMessageInfo), options.controlMessages
+                );
+              }
+            }
+
+            if (custom) {
+              if (!reResult) {
+                console.log(
+                  textStyle(colors.warning)(
+                    '\nYour message is not matched.'
+                  ),
+                  textStyle(colors.warning)(
+                    'Repeat with candidate of message...'
+                  )
+                );
+
+                customMessageInfo.message = null;
+                messageInfo = controlMessages[0];
+                custom = false;
+              } else {
+                customMessageInfo.message = readlineSync.question(
+                  textStyle(colors.info)('\nEnter your message...\n')
+                );
+
+                messageInfo = customMessageInfo;
+              }
+            } else {
+              break;
+            }
+          }
+
+          if (customMessageInfo.message) {
+            console.log(textStyle(colors.info)(
+              '\n...end of trying with your message.'
+            ));
           }
 
           controlMessages.forEach(function(m, i) {
@@ -1151,7 +1204,10 @@ Harvester.prototype = {
 
     do {
       next = false;
-      key = readlineSync.keyIn(query, { limit: 'yncx', caseSensitive: true });
+      key = readlineSync.keyIn(query, {
+        limit: options.controlMessages ? 'yncqx' : 'yncx',
+        caseSensitive: true
+      });
 
       if (key === 'x') {
         if (readlineSync.keyInYN('Do you want abort?')) {
@@ -1164,7 +1220,30 @@ Harvester.prototype = {
 
     return {
       wrap: key === 'y' || key === 'c',
-      context: key === 'c' ? DEFAULT_MESSAGE_CONTEXT : false
+      context: key === 'c' ? DEFAULT_MESSAGE_CONTEXT : false,
+      custom: key === 'q'
+    };
+  },
+
+  _getQuotes: function(literal) {
+    var r;
+    var left = "'";
+    var right = left;
+
+    if (literal[0] === '"') {
+      left = right = '"';
+    // TODO: ?
+    // } else if (literal.indexOf('[[') === 0) {
+    //   left = '[[';
+    //   right = ']]';
+    } else if ((r = /^\[(=*)\[/.exec(literal))) {
+      left = '[' + r[1] + '[';
+      right = ']' + r[1] + ']';
+    }
+
+    return {
+      left: left,
+      right: right
     };
   },
 
