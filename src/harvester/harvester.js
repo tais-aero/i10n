@@ -548,8 +548,15 @@ Harvester.prototype = {
             ' Keys:\n',
             '   y - wrap\n',
             '   n - no wrap\n',
-            '   c - wrap within context\n',
-            '   x - abort\n'
+            '   c - wrap within context'
+          );
+          if (wrapOptions.controlMessages) {
+            console.log(
+              '    q - custom message'
+            );
+          }
+          console.log(
+            '    x - abort\n'
           );
         }
 
