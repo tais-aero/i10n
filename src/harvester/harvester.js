@@ -70,7 +70,7 @@ var DEFAULT_CONFIG = {
     light: 'gray',
     info: 'blue',
     warning: 'red',
-    candidateToWrap: 'green',
+    candidateToWrap: 'magenta.bgWhiteBright.bold',
     wrapped: 'gray'
   },
 
@@ -823,8 +823,9 @@ Harvester.prototype = {
     return messages;
   },
 
-  _addCustomMessageToControlMessages: function(customMessage, controlMessages) {
-    controlMessages.push(customMessage);
+  _addCustomMessageToControlMessages: function(customMessageInfo,
+                                               controlMessages) {
+    controlMessages.push(customMessageInfo);
     return sortBy(
       controlMessages,
       function(messageInfo) {

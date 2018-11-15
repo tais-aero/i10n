@@ -744,7 +744,7 @@ describe('harvester', function() {
 
             this.timeout(300000);
             test_wrapTranslationTextsInLua('test/data/smart/wrap-translation/lua/control_messages_within_prompt', true, wrapOptions, true);
-            console.log(testUtils.printObject(getSmartWrapResult(controlMessages)));
+            console.log(testUtils.printObject(getSmartWrapResult(wrapOptions.controlMessages)));
           });
 
           it('without prompt', function() {
@@ -770,7 +770,7 @@ describe('harvester', function() {
             test_wrapTranslationTextsInLua('test/data/smart/wrap-translation/lua/control_messages_without_prompt', true, wrapOptions);
             // test_wrapTranslationTextsInLua('test/data/smart/wrap-translation/lua/control_messages_within_prompt', true, wrapOptions, true);
 
-            var result = getSmartWrapResult(controlMessages);
+            var result = getSmartWrapResult(wrapOptions.controlMessages);
 
             expect(result.allCount).to.be.equal(14);
             expect(result.noWraps).to.have.lengthOf(3);
