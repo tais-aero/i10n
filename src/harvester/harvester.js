@@ -5,6 +5,8 @@ var cloneDeep = require('lodash/lang/cloneDeep');
 var merge = require('lodash/object/merge');
 var get = require('lodash/object/get');
 var set = require('lodash/object/set');
+var drop = require('lodash/array/drop');
+var each = require('lodash/collection/each');
 var reduce = require('lodash/collection/reduce');
 var includes = require('lodash/collection/includes');
 var filter = require('lodash/collection/filter');
@@ -849,6 +851,7 @@ Harvester.prototype = {
     var isWrapped = false;
     var parseError = null;
     var ast = null;
+    var _skip = false;
 
     try {
       ast = me._parseLua(input);
@@ -870,7 +873,7 @@ Harvester.prototype = {
 
       if (isWrap) {
         prompt = me._promptWrap(
-          literal, '', '', [ before ], [ after ], options
+          literal, '', '', [ before ], [ after ], null, options
         );
 
         if (prompt.wrap) {
@@ -883,12 +886,17 @@ Harvester.prototype = {
       } else {
         var quotes = me._getQuotes(literal);
 
-        var controlMessages = (_inline && _inline.controlMessages) || filter(
-          options.controlMessages,
-          function(messageInfo) {
-            return literal.indexOf(messageInfo.message) !== -1;
-          }
-        );
+        var inlineControlMessages = get(_inline, 'controlMessages');
+
+        var remainsControlMessages = get(_inline, 'remainsControlMessages') ||
+          filter(
+            options.controlMessages,
+            function(messageInfo) {
+              return literal.indexOf(messageInfo.message) !== -1;
+            }
+          );
+
+        var controlMessages = inlineControlMessages || remainsControlMessages;
 
         if (controlMessages.length > 0) {
           var messageInfo = controlMessages[0];
@@ -940,8 +948,16 @@ Harvester.prototype = {
                 _inline ?
                   [ after, _inline.after ] :
                   [ after ],
+                remainsControlMessages,
                 options
               );
+
+              if (prompt.skip) {
+                _skip = true;
+                break;
+              } else {
+                _skip = false;
+              }
 
               if (prompt.custom) {
                 custom = true;
@@ -1000,6 +1016,10 @@ Harvester.prototype = {
               }
             }
 
+            if (_skip) {
+              break;
+            }
+
             if (custom) {
               if (!reResult) {
                 console.log(
@@ -1026,30 +1046,37 @@ Harvester.prototype = {
             }
           }
 
-          if (customMessageInfo.message) {
-            console.log(textStyle(colors.info)(
-              '\n...end of trying with your message.'
-            ));
-          }
-
-          controlMessages.forEach(function(m, i) {
-            if (i === 0) {
-              return;
+          if (!_skip) {
+            if (customMessageInfo.message) {
+              console.log(textStyle(colors.info)(
+                '\n...end of trying with your message.'
+              ));
             }
 
-            var inlineResult = me.wrapTranslationTextsInLua(
-              inlineExpLeft + text,
-              options,
-              {
-                controlMessages: [ m ],
-                before: before,
-                after: after
+            each(controlMessages, function(m, i) {
+              if (i === 0) {
+                return;
               }
-            );
 
-            text = inlineResult.wrapped.substr(inlineExpLeft.length);
-            count += inlineResult.stat.counts.wrappedTexts;
-          });
+              var inlineResult = me.wrapTranslationTextsInLua(
+                inlineExpLeft + text,
+                options,
+                {
+                  controlMessages: [ m ],
+                  remainsControlMessages: drop(remainsControlMessages, i),
+                  before: before,
+                  after: after
+                }
+              );
+
+              if (inlineResult._skip) {
+                return false;
+              }
+
+              text = inlineResult.wrapped.substr(inlineExpLeft.length);
+              count += inlineResult.stat.counts.wrappedTexts;
+            });
+          }
         }
       }
 
@@ -1146,11 +1173,13 @@ Harvester.prototype = {
     return {
       wrapped: input,
       stat: stat,
-      parseError: parseError
+      parseError: parseError,
+      _skip: _skip
     };
   },
 
-  _promptWrap: function(message, left, right, befores, afters, options) {
+  _promptWrap: function(message, left, right, befores, afters,
+                        controlMessages, options) {
     if (!options.prompt) {
       return {
         wrap: true,
@@ -1205,7 +1234,18 @@ Harvester.prototype = {
         '\n\n'
       ) +
       beforeFragment + messageFragment + afterFragment +
-      textStyle(colors.light)('\n\n...? ');
+      textStyle(colors.light)(
+        controlMessages ?
+          ('\n\n...\n' + message + '\n? ') : ('\n\n...? ')
+      );
+
+    var printControlMessages = function() {
+      console.log('');
+      controlMessages.forEach(function(messageInfo) {
+        console.log(textStyle(colors.light)(messageInfo.message));
+      });
+      console.log('');
+    };
 
     var next;
     var key;
@@ -1213,9 +1253,18 @@ Harvester.prototype = {
     do {
       next = false;
       key = readlineSync.keyIn(query, {
-        limit: options.controlMessages ? 'yncqx' : 'yncx',
+        limit: controlMessages ? 'yncql>x' : 'yncx',
         caseSensitive: true
       });
+
+      if (key === 'l') {
+        printControlMessages();
+        readlineSync.keyInPause('', {
+          limit: ' ',
+          guide: false
+        });
+        next = true;
+      }
 
       if (key === 'x') {
         if (readlineSync.keyInYN('Do you want abort?')) {
@@ -1229,7 +1278,8 @@ Harvester.prototype = {
     return {
       wrap: key === 'y' || key === 'c',
       context: key === 'c' ? DEFAULT_MESSAGE_CONTEXT : false,
-      custom: key === 'q'
+      custom: key === 'q',
+      skip: key === '>'
     };
   },
 
