@@ -349,8 +349,16 @@ Translator.prototype = {
       Globalize.locale(locale);
 
       forEach(messages, function(message, globalizeMessageKey) {
-        var formatter = message ?
-          Globalize.messageFormatter(globalizeMessageKey) : null;
+        var formatter = null;
+
+        if (message) {
+          try {
+            formatter = Globalize.messageFormatter(globalizeMessageKey);
+          } catch (e) {
+            // NOOP
+          }
+        }
+
         formatters[globalizeMessageKey] = formatter;
       });
 
