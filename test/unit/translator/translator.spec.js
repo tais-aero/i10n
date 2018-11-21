@@ -8,8 +8,8 @@ var expect = chai.expect;
 
 var fs = require('fs');
 
-var cloneDeep = require('lodash/lang/cloneDeep');
-var unescape = require('lodash/string/unescape');
+var cloneDeep = require('lodash/cloneDeep');
+var unescape = require('lodash/unescape');
 
 // var testUtils = require('test/utils');
 

@@ -2,7 +2,7 @@
 
 var Handlebars = require('handlebars');
 
-var toArray = require('lodash/lang/toArray');
+var toArray = require('lodash/toArray');
 
 // -----------------------------------------------------------------------------
 

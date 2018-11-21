@@ -10,17 +10,17 @@ var fs = require('fs-extra');
 var path = require('path');
 var glob = require('glob');
 
-var flatten = require('lodash/array/flatten');
-var map = require('lodash/collection/map');
-var each = require('lodash/collection/each');
-var includes = require('lodash/collection/includes');
-var reduce = require('lodash/collection/reduce');
-var size = require('lodash/collection/size');
-var defaultsDeep = require('lodash/object/defaultsDeep');
-var get = require('lodash/object/get');
-var trim = require('lodash/string/trim');
-var endsWith = require('lodash/string/endsWith');
-var repeat = require('lodash/string/repeat');
+var flatten = require('lodash/flatten');
+var map = require('lodash/map');
+var each = require('lodash/each');
+var includes = require('lodash/includes');
+var reduce = require('lodash/reduce');
+var size = require('lodash/size');
+var defaultsDeep = require('lodash/defaultsDeep');
+var get = require('lodash/get');
+var trim = require('lodash/trim');
+var endsWith = require('lodash/endsWith');
+var repeat = require('lodash/repeat');
 
 var chalk = require('chalk');
 
