@@ -62,6 +62,30 @@ var jsonToPo = function(json) {
 /**
  * TODO: docs
  */
+var poItemsToMessages = function(items) {
+  var messages = {};
+
+  items.forEach(function(item) {
+    var messageKey = utils.buildMessageKey(item.msgid, item.msgctxt);
+    var message = item.msgstr.join('');
+
+    messages[messageKey] = message;
+  });
+
+  return messages;
+};
+
+/**
+ * TODO: docs
+ */
+var poToMessages = function(po) {
+  var poData = poToJson(po);
+  return poItemsToMessages(poData.items);
+};
+
+/**
+ * TODO: docs
+ */
 var textInfo = function(text) {
   text = text || '';
 
@@ -303,6 +327,8 @@ var restoreTransferPo = function(srcPo, dstPo) {
 module.exports = {
   poToJson: poToJson,
   jsonToPo: jsonToPo,
+  poItemsToMessages: poItemsToMessages,
+  poToMessages: poToMessages,
   poInfo: poInfo,
   contextToComments: contextToComments,
   transferPo: transferPo,

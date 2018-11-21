@@ -188,14 +188,7 @@ Translator.prototype = {
     pos.forEach(function(po) {
       var poData = poUtils.poToJson(po);
       var locale = poData.headers.Language;
-      var localeMessages = {};
-
-      poData.items.forEach(function(item) {
-        var messageKey = utils.buildMessageKey(item.msgid, item.msgctxt);
-        var message = item.msgstr.join('');
-
-        localeMessages[messageKey] = message;
-      });
+      var localeMessages = poUtils.poItemsToMessages(poData.items);
 
       messages[locale] = messages[locale] ?
         assign(messages[locale], localeMessages) :
@@ -356,8 +349,16 @@ Translator.prototype = {
       Globalize.locale(locale);
 
       forEach(messages, function(message, globalizeMessageKey) {
-        var formatter = message ?
-          Globalize.messageFormatter(globalizeMessageKey) : null;
+        var formatter = null;
+
+        if (message) {
+          try {
+            formatter = Globalize.messageFormatter(globalizeMessageKey);
+          } catch (e) {
+            // NOOP
+          }
+        }
+
         formatters[globalizeMessageKey] = formatter;
       });
 

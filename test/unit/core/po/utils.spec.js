@@ -39,6 +39,23 @@ describe('core/po/utils', function() {
     expect(po).to.have.string('msgid "Ключ"');
   });
 
+  it('#poItemsToMessages', function() {
+    var po = fs.readFileSync('test/data/po/xx.po', 'utf8');
+    var poData = poUtils.poToJson(po);
+    var messages = poUtils.poItemsToMessages(poData.items);
+    var messagesJson = require('test/data/po/xx.po.messages.json');
+
+    expect(messages).to.deep.equal(messagesJson);
+  });
+
+  it('#poToMessages', function() {
+    var po = fs.readFileSync('test/data/po/xx.po', 'utf8');
+    var messages = poUtils.poToMessages(po);
+    var messagesJson = require('test/data/po/xx.po.messages.json');
+
+    expect(messages).to.deep.equal(messagesJson);
+  });
+
   it('#poInfo', function() {
     var po = fs.readFileSync('test/data/po/info/en.po', 'utf8');
     var info = poUtils.poInfo(po);

@@ -92,13 +92,13 @@ while read -r X rights X hash file_status filename; do
 
           *)
             if [ "$exit_code" != 1 ]; then
-              ./node_modules/.bin/jscs $filename
+              jscs $filename
               if [ "$?" != "0" ]; then
                 exit_code=1
               fi
             fi
             if [ "$exit_code" != 1 ]; then
-              ./node_modules/.bin/jshint $filename
+              jshint $filename
               if [ "$?" != "0" ]; then
                 exit_code=1
               fi

@@ -90,6 +90,7 @@ var buildMessageArguments = function(/*key, context, data*/) {
  * @param {Object} data Data properties.
  * @returns {String} Formatted template.
  */
+// TODO: replace arguments: string, data, options
 var formatTemplate = function(string, options, data) {
   var compiled = template(string, options || TEMPLATE_OPTIONS);
   return compiled(data);
@@ -98,8 +99,22 @@ var formatTemplate = function(string, options, data) {
 /**
  * TODO: docs, test
  */
+var textLines = function(text) {
+  return text.split(/\r?\n/);
+};
+
+/**
+ * TODO: docs, test
+ */
+var textLineCount = function(text) {
+  return textLines(text).length;
+};
+
+/**
+ * TODO: docs, test
+ */
 var toStringIndex = function(text, line, column) {
-  var lines = text.split(/\r?\n/);
+  var lines = textLines(text);
   var index = 0;
 
   line--;
@@ -111,6 +126,14 @@ var toStringIndex = function(text, line, column) {
   return index + column + line;
 };
 
+/**
+ * TODO: docs, test
+ */
+var escapeRegExp = function(text) {
+  // return text.replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+};
+
 // -----------------------------------------------------------------------------
 
 module.exports = {
@@ -118,5 +141,8 @@ module.exports = {
   unbuildMessageKey: unbuildMessageKey,
   buildMessageArguments: buildMessageArguments,
   formatTemplate: formatTemplate,
-  toStringIndex: toStringIndex
+  textLines: textLines,
+  textLineCount: textLineCount,
+  toStringIndex: toStringIndex,
+  escapeRegExp: escapeRegExp
 };
