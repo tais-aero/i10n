@@ -1,8 +1,8 @@
 'use strict';
 
-var isString = require('lodash/lang/isString');
-var toArray = require('lodash/lang/toArray');
-var template = require('lodash/string/template');
+var isString = require('lodash/isString');
+var toArray = require('lodash/toArray');
+var template = require('lodash/template');
 
 // -----------------------------------------------------------------------------
 
@@ -83,7 +83,7 @@ var buildMessageArguments = function(/*key, context, data*/) {
 /**
  * Compile and format template.
  *
- * Wrap of: `lodash/string/template`.
+ * Wrap of: `lodash/template`.
  *
  * @param {String} string template.
  * @param {String} options Options object.

@@ -1,17 +1,17 @@
 'use strict';
 
-var isString = require('lodash/lang/isString');
-var cloneDeep = require('lodash/lang/cloneDeep');
-var merge = require('lodash/object/merge');
-var get = require('lodash/object/get');
-var set = require('lodash/object/set');
-var drop = require('lodash/array/drop');
-var each = require('lodash/collection/each');
-var reduce = require('lodash/collection/reduce');
-var includes = require('lodash/collection/includes');
-var filter = require('lodash/collection/filter');
-var sortBy = require('lodash/collection/sortBy');
-var repeat = require('lodash/string/repeat');
+var isString = require('lodash/isString');
+var cloneDeep = require('lodash/cloneDeep');
+var merge = require('lodash/merge');
+var get = require('lodash/get');
+var set = require('lodash/set');
+var drop = require('lodash/drop');
+var each = require('lodash/each');
+var reduce = require('lodash/reduce');
+var includes = require('lodash/includes');
+var filter = require('lodash/filter');
+var sortBy = require('lodash/sortBy');
+var repeat = require('lodash/repeat');
 
 var Handlebars = require('handlebars');
 var parse5 = require('parse5');
@@ -1879,8 +1879,8 @@ Harvester.prototype = {
 
     var poItems = [];
 
-    var sortedByKey = sortBy(keyItems, function(i, k) {
-      return k;
+    var sortedByKey = sortBy(keyItems, function(item) {
+      return item[0].key + (item[0].context || '');
     });
 
     sortedByKey.forEach(function(items) {

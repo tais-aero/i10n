@@ -2,11 +2,11 @@
 
 // TODO: optimize: don't use baseLocale
 
-var assign = require('lodash/object/assign');
-var merge = require('lodash/object/merge');
-var get = require('lodash/object/get');
-var escape = require('lodash/string/escape');
-var forEach = require('lodash/collection/forEach');
+var assign = require('lodash/assign');
+var merge = require('lodash/merge');
+var get = require('lodash/get');
+var escape = require('lodash/escape');
+var forEach = require('lodash/forEach');
 
 // TEMP:
 // var testUtils = require('test/utils');

@@ -1,6 +1,6 @@
 'use strict';
 
-var find = require('lodash/collection/find');
+var find = require('lodash/find');
 var PO = require('pofile');
 
 // TEMP:
