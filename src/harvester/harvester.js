@@ -333,7 +333,15 @@ Harvester.prototype = {
 
     var me = this;
     var config = me._config.js;
-    var ast = me._parseJs(options.input);
+    var ast;
+
+    try {
+      ast = me._parseJs(options.input);
+    } catch (e) {
+      // TODO: best way for logging
+      console.log('Error:', e);
+      return keyItems;
+    }
 
     astTraverse(ast, {
       pre: function(node) {
