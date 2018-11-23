@@ -225,6 +225,7 @@ Harvester.prototype = {
     var keyItems = options.keyItems || {};
 
     var me = this;
+    var colors = me._config.colors;
     var files = glob.sync(options.pattern, {
       cwd: options.cwd,
       ignore: options.excludes,
@@ -264,8 +265,7 @@ Harvester.prototype = {
       try {
         content = me._readFileRelative(options.cwd, file);
       } catch (e) {
-        // TODO: best way for logging
-        console.log('Error:', e);
+        console.log('Error:', textStyle(colors.light)(e.message));
         return;
       }
 
@@ -338,8 +338,9 @@ Harvester.prototype = {
     try {
       ast = me._parseJs(options.input);
     } catch (e) {
-      // TODO: best way for logging
-      console.log('Error:', e);
+      me._printParseFileResult(
+        { parseError: e }, options.file, 'Parse JS file error...'
+      );
       return keyItems;
     }
 
@@ -379,8 +380,9 @@ Harvester.prototype = {
     try {
       ast = me._parseLua(options.input);
     } catch (e) {
-      // TODO: best way for logging
-      console.log('Error:', e);
+      me._printParseFileResult(
+        { parseError: e }, options.file, 'Parse Lua file error...'
+      );
       return keyItems;
     }
 
@@ -2077,9 +2079,15 @@ Harvester.prototype = {
 
   _printParseFileResult: function(result, filePath, errorMessage) {
     if (result.parseError) {
-      console.log(errorMessage || 'Parse file error...');
-      console.log('Path:', filePath);
-      console.log('Error:', result.parseError);
+      var colors = this._config.colors;
+
+      console.log(
+        textStyle(colors.warning)(errorMessage || 'Parse file error...')
+      );
+      console.log('Path:', textStyle(colors.info)(filePath));
+      console.log(
+        'Error:', textStyle(colors.light)(result.parseError.message), '\n'
+      );
     }
   },
 
