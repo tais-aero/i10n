@@ -1,4 +1,4 @@
-# TAIS Internationalization Tool
+# Another Internationalization Tool
 
 ## Configure Git
 
