@@ -1,4 +1,4 @@
-# Another Internationalization Tool
+# Yet another Internationalization Tool
 
 ## Configure Git
 
