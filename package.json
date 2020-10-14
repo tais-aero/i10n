@@ -9,7 +9,7 @@
     "mocha": "5.2.0"
   },
   "dependencies": {
-    "acorn": "5.7.2",
+    "acorn": "5.7.4",
     "ast-traverse": "0.1.1",
     "chalk": "2.4.1",
     "cldr-data": "34.0.0",
